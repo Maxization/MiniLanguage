@@ -3,8 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# .dll
+# Unnessesary files and binaries
 MiniLanguage/MiniLanguage/QUT.ShiftReduceParser.dll
+MiniLanguage/MiniLanguage/Gppg.exe
+MiniLanguage/MiniLanguage/Parser.cs
+MiniLanguage/MiniLanguage/Scanner.cs
+MiniLanguage/MiniLanguage/generate.bat
+MiniLanguage/MiniLanguage/gplex.exe
 
 # User-specific files
 *.rsuser
