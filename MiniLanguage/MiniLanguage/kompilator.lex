@@ -1,4 +1,5 @@
 %using QUT.Gppg;
+%using MiniLanguage;
 %namespace GardensPoint
 
 IntNumber   [0-9]+
@@ -8,9 +9,9 @@ PrintErr    "print"("@"|"$"|[a-z0-9])[a-z0-9]*
 
 %%
 
-{IntNumber}   { yylval.val=yytext; return (int)Tokens.IntNumber; }
-{RealNumber}  { yylval.val=yytext; return (int)Tokens.RealNumber; }
-{Ident}       { yylval.val=yytext; return (int)Tokens.Ident; }
+{IntNumber}   { yylval.type=IntMiniType; return (int)Tokens.IntNumber; }
+{RealNumber}  { yylval.type=DoubleMiniType; return (int)Tokens.RealNumber; }
+{Ident}       { yylval.str=yytext; return (int)Tokens.Ident; }
 "="           { return (int)Tokens.Assign; }
 "+"           { return (int)Tokens.Plus; }
 "-"           { return (int)Tokens.Minus; }

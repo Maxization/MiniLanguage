@@ -5,40 +5,43 @@
 
 %union
 {
-public string  val;
-public char    type;
+    public AbstractMiniType type;
+    public string str;
 }
 
 %token Program Write Assign OpenBrace CloseBrace Semicolon Comma
-%token <val> Type Ident IntNumber RealNumber
+%token <type> Type
+%token <str> Ident
+
+//%type <type> value
 
 %%
 
-start: Program block { Compiler.Program = new Program($2) };
+start: Program block { Compiler.Program = new Program($2); };
 
-block: OpenBrace statements CloseBrace { $$ = new Block($2) };
+block: OpenBrace statements CloseBrace { $$ = new Block($2); };
 
-statements: declaration statements { $$ = $2 }
-          | statement statements   {
-                                     $2.Add($1);
-                                     $$ = $2
-                                   }
-          |                        { $$ = new List<INode>() }
+statements: statement statements { $2.Add($1); $$ = $2; }
+          |                      { $$ = new List<INode>(); }
           ;
 
-statement: line Semicolon {};
+statement: line Semicolon { $$ = $1; };
 
-line: write              {}
-    | Ident Assign value {}
+line: write        { $$ = $1; }
+    | declarations { $$ = $1; }
     ;
 
-value: IntNumber {};
+declarations: declaration declarations { $2.Add($1); $$ = $2 }
+            |                          { $$ = new List<INode>(); }
+            ;
 
-write: Write exp {};
+declaration: Type idents Ident { };
 
-exp: Ident {};
+write: Write exp { $$ = new Write($2) }; //?
 
-declaration: Type idents Ident Semicolon {};
+exp: Ident     {}
+   | assigment {}
+   ;
 
 idents: idents Ident Comma {}
       |                    {}
