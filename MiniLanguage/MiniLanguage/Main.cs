@@ -8,13 +8,20 @@ namespace MiniLanguage
     public class Compiler
     {
         public static int errors = 0;
-
+        public static int linenum;
         private static StreamWriter sw;
         public static Program Program { get; set; }
         public static CodeGenerator codeGenerator { get; set; }
         public static SyntaxTreeGenerator STG => new SyntaxTreeGenerator();
-
         public static List<string> source;
+
+        public static void PrintError(string message = null)
+        {
+            if (message is null)
+                Console.WriteLine($"line: {linenum}, syntax error");
+            else
+                Console.WriteLine($"line: {linenum}, " + message);
+        }
 
         // arg[0] określa plik źródłowy
         // pozostałe argumenty są ignorowane
@@ -46,7 +53,16 @@ namespace MiniLanguage
             Scanner scanner = new Scanner(source);
             Parser parser = new Parser(scanner);
             Console.WriteLine();
-            parser.Parse();
+
+            try
+            {
+                parser.Parse();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"error: line {linenum}, {ex.Message}");
+            }
+            
             source.Close();
             if (errors == 0)
             {
@@ -54,7 +70,7 @@ namespace MiniLanguage
                 codeGenerator = new CodeGenerator(sw);
                 codeGenerator.GenCode(Program);
                 sw.Close();
-                Console.WriteLine("  compilation successful\n");
+                Console.WriteLine("Compilation successful\n");
             }
             else
                 Console.WriteLine($"\n  {errors} errors detected\n");
@@ -103,8 +119,13 @@ namespace MiniLanguage
 
         public Declaration AddDeclaration(string name, AbstractMiniType type)
         {
+            if(Declarations.ContainsKey(name))
+            {
+                Compiler.PrintError("variable already declared");
+                return null;
+            }
+
             string uniqueName = NewTemp(name);
-            //TODO: Check types and if exists
 
             Identifier ident = new Identifier(uniqueName, type);
             Declaration dec = new Declaration(ident);
@@ -115,7 +136,10 @@ namespace MiniLanguage
 
         public Identifier FindIdent(string name)
         {
-            //TODO: Check for errors etc
+            if(!Declarations.ContainsKey(name))
+            {
+                throw new InvalidOperationException("undeclared variable");
+            }
             return Declarations[name].Identifier;
         }
     }
@@ -149,7 +173,7 @@ namespace MiniLanguage
         {
             EmitCode("; prolog");
             EmitCode("declare i32 @printf(i8*, ...)");
-            EmitCode("define void @main()");
+            EmitCode("define i32 @main()");
         }
 
         public void Visit(Program program)
@@ -163,7 +187,7 @@ namespace MiniLanguage
             EmitCode("{");
             foreach (INode node in block.Statements)
                 node.Accept(this);
-            EmitCode("ret void");
+            EmitCode("ret i32 0");
             EmitCode("}");
         }
 

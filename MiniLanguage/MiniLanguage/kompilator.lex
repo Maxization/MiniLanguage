@@ -3,6 +3,12 @@
 %namespace GardensPoint
 
 Ident       [a-zA-Z]([a-zA-Z0-9])*
+Double      (0|[1-9][0-9]*)\.[0-9]+
+Int         0|[1-9][0-9]*
+Hex         (0x|0X)[0-9a-fA-F]+
+Comment     \/\/.*\n
+String      ".*"
+
 
 %%
 

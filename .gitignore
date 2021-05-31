@@ -10,6 +10,7 @@ MiniLanguage/MiniLanguage/Parser.cs
 MiniLanguage/MiniLanguage/Scanner.cs
 MiniLanguage/MiniLanguage/generate.bat
 MiniLanguage/MiniLanguage/gplex.exe
+ modified:   MiniLanguage/MiniLanguage/kompilator.lst
 
 # User-specific files
 *.rsuser
