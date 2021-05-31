@@ -1,50 +1,42 @@
 
 // Uwaga: W wywo³aniu generatora gppg nale¿y u¿yæ opcji /gplex
 %using MiniLanguage
+%using System.Linq
 %namespace GardensPoint
 
 %union
 {
     public AbstractMiniType type;
     public string str;
+    public List<string> strList;
+    public INode node;
+    public List<INode> nodeList;
 }
 
-%token Program Write Assign OpenBrace CloseBrace Semicolon Comma
+%token Program OpenBrace CloseBrace Semicolon Comma
 %token <type> Type
 %token <str> Ident
 
-//%type <type> value
+%type <node> block
+%type <nodeList> declaration declarations
+%type <strList> idents
 
 %%
 
-start: Program block { Compiler.Program = new Program($2); };
+start: Program block { Compiler.Program = new Program($2 as Block); };
 
-block: OpenBrace statements CloseBrace { $$ = new Block($2); };
+block: OpenBrace declarations CloseBrace { $$ = new Block($2); };
 
-statements: statement statements { $2.Add($1); $$ = $2; }
-          |                      { $$ = new List<INode>(); }
-          ;
-
-statement: line Semicolon { $$ = $1; };
-
-line: write        { $$ = $1; }
-    | declarations { $$ = $1; }
-    ;
-
-declarations: declaration declarations { $2.Add($1); $$ = $2 }
-            |                          { $$ = new List<INode>(); }
+declarations: declarations declaration Semicolon { $1.AddRange($2); $$ = $1; }
+            |                                    { $$ = new List<INode>(); }
             ;
 
-declaration: Type idents Ident { };
+declaration: Type idents Ident { $2.Add($3); $$ = $2.Select(name => Compiler.STG.AddDeclaration(name, $1) as INode).ToList(); };
 
-write: Write exp { $$ = new Write($2) }; //?
-
-exp: Ident     {}
-   | assigment {}
-   ;
-
-idents: idents Ident Comma {}
-      |                    {}
+idents: idents Ident Comma { $1.Add($2); $$ = $1; }
+      |                    { $$ = new List<string>(); }
       ;
 
 %%
+
+public Parser(Scanner scanner) : base(scanner) { }

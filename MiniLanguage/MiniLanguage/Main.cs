@@ -8,7 +8,11 @@ namespace MiniLanguage
     public class Compiler
     {
         public static int errors = 0;
+
+        private static StreamWriter sw;
         public static Program Program { get; set; }
+        public static CodeGenerator codeGenerator { get; set; }
+        public static SyntaxTreeGenerator STG => new SyntaxTreeGenerator();
 
         public static List<string> source;
 
@@ -18,7 +22,7 @@ namespace MiniLanguage
         {
             string file;
             FileStream source;
-            Console.WriteLine("\nLLVM Code Generator for Multiline Calculator - Recursive Descent Method");
+            Console.WriteLine("\nLLVM Code Generator for Mini Language");
             if (args.Length >= 1)
                 file = args[0];
             else
@@ -47,59 +51,14 @@ namespace MiniLanguage
             if (errors == 0)
             {
                 sw = new StreamWriter(file + ".ll");
-                GenCode();
+                codeGenerator = new CodeGenerator(sw);
+                codeGenerator.GenCode(Program);
                 sw.Close();
                 Console.WriteLine("  compilation successful\n");
             }
             else
                 Console.WriteLine($"\n  {errors} errors detected\n");
             return errors == 0 ? 0 : 2;
-        }
-
-        public static void EmitCode(string instr = null)
-        {
-            sw.WriteLine(instr);
-        }
-
-        public static void EmitCode(string instr, params object[] args)
-        {
-            sw.WriteLine(instr, args);
-        }
-
-        public static string NewTemp()
-        {
-            return string.Format($"%t{++nr}");
-        }
-
-        private static StreamWriter sw;
-        private static int nr;
-
-        private static void GenCode()
-        {
-            EmitCode("; prolog");
-            EmitCode("@int_res = constant [15 x i8] c\"  Result:  %d\\0A\\00\"");
-            EmitCode("@double_res = constant [16 x i8] c\"  Result:  %lf\\0A\\00\"");
-            EmitCode("@end = constant [20 x i8] c\"\\0AEnd of execution\\0A\\0A\\00\"");
-            EmitCode("declare i32 @printf(i8*, ...)");
-            EmitCode("define void @main()");
-            EmitCode("{");
-            for (char c = 'a'; c <= 'z'; ++c)
-            {
-                EmitCode($"%i{c} = alloca i32");
-                EmitCode($"store i32 0, i32* %i{c}");
-                EmitCode($"%r{c} = alloca double");
-                EmitCode($"store double 0.0, double* %r{c}");
-            }
-            EmitCode();
-
-            //TODO: Emit Program code
-            //for (int i = 0; i < code.Count; ++i)
-            //{
-            //    EmitCode($"; linia {i + 1,3} :  " + source[i]);
-            //    code[i].GenCode();
-            //    EmitCode();
-            //}
-            EmitCode("}");
         }
 
     }
@@ -130,38 +89,23 @@ namespace MiniLanguage
 
     #endregion
 
-    #region
-
-    public abstract class BinaryOperator
+    public class SyntaxTreeGenerator
     {
-
-    }
-
-
-    #endregion
-
-    #region visitor
-    public interface IVisitor
-    {
-        void Visit(Program program);
-        void Visit(Block block);
-
-        void Visit(Declaration declaration);
-    }
-
-    public class CodeGenerator : IVisitor
-    {
-        private static StreamWriter sw;
         private static int nr;
+        private Dictionary<string, Declaration> Declarations { get; }
+
+        public SyntaxTreeGenerator()
+        {
+            Declarations = new Dictionary<string, Declaration>();
+        }
+
         public static string NewTemp(string prefix) => $"{prefix}_{++nr}";
-        public static void EmitCode(string instr = null) => sw.WriteLine(instr);
-        public static void EmitCode(string instr, params object[] args) => sw.WriteLine(instr, args);
-        private Dictionary<string, Declaration> Declarations => new Dictionary<string, Declaration>();
 
         public Declaration AddDeclaration(string name, AbstractMiniType type)
         {
             string uniqueName = NewTemp(name);
-            //Check types and if exists
+            //TODO: Check types and if exists
+
             Identifier ident = new Identifier(uniqueName, type);
             Declaration dec = new Declaration(ident);
 
@@ -169,13 +113,41 @@ namespace MiniLanguage
             return dec;
         }
 
+        public Identifier FindIdent(string name)
+        {
+            //TODO: Check for errors etc
+            return Declarations[name].Identifier;
+        }
+    }
+
+    #region visitor
+    public interface IVisitor
+    {
+        void Visit(Program program);
+        void Visit(Block block);
+        void Visit(Declaration declaration);
+    }
+
+    public class CodeGenerator : IVisitor
+    {
+        private static StreamWriter sw;
+        public static void EmitCode(string instr = null) => sw.WriteLine(instr);
+        public static void EmitCode(string instr, params object[] args) => sw.WriteLine(instr, args);
+
+        public CodeGenerator(StreamWriter streamWriter)
+        {
+            sw = streamWriter;
+        }
+
+        public void GenCode(Program program)
+        {
+            program.Accept(this);
+        }
+
         
-        private static void GenProlog()
+        private void GenProlog()
         {
             EmitCode("; prolog");
-            EmitCode("@int_res = constant [15 x i8] c\"  Result:  %d\\0A\\00\"");
-            EmitCode("@double_res = constant [16 x i8] c\"  Result:  %lf\\0A\\00\"");
-            EmitCode("@end = constant [20 x i8] c\"\\0AEnd of execution\\0A\\0A\\00\"");
             EmitCode("declare i32 @printf(i8*, ...)");
             EmitCode("define void @main()");
         }
@@ -191,6 +163,7 @@ namespace MiniLanguage
             EmitCode("{");
             foreach (INode node in block.Statements)
                 node.Accept(this);
+            EmitCode("ret void");
             EmitCode("}");
         }
 
@@ -238,26 +211,60 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
-    public class Assigment : INode
+    public interface IEvaluable
     {
+        AbstractMiniType Type { get; }
+        string Value { get; }
+    }
+
+    // TODO
+    public class Constant : IEvaluable
+    {
+        public AbstractMiniType Type { get; }
+        public string Value { get; }
+        public Constant(AbstractMiniType type, string value)
+        {
+            Type = type;
+            Value = value;
+        }
+    }
+
+    // TODO
+    public class Variable : IEvaluable
+    {
+        public Identifier Identifier { get; }
+        public string Value { get => Identifier.Name; }
+        public AbstractMiniType Type { get => Identifier.Type; }
+        public Variable(Identifier ident) => Identifier = ident;
+    }
+
+    // TODO
+    public class Assignment : INode
+    {
+        public string Name { get; }
+        public Assignment(string name, IEvaluable eval)
+        {
+
+        }
         public void Accept(IVisitor visitor)
         {
             throw new NotImplementedException();
         }
     }
 
+    // TODO
     public class Write : INode
     {
-        public void Accept(IVisitor visitor)
+        public Write(string exp)
         {
-            throw new NotImplementedException();
+            
         }
+        public void Accept(IVisitor visitor) { }
     }
 
     public class Declaration : INode
     {
         public Identifier Identifier { get; }
-
         public Declaration(Identifier ident) => Identifier = ident;
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
@@ -273,15 +280,4 @@ namespace MiniLanguage
             Type = type;
         }
     }
-
-    public class Variable : INode
-    {
-        public Identifier Identifier { get; }
-        public string Value { get; set; }
-        public void Accept(IVisitor visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
 }

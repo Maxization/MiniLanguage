@@ -2,26 +2,24 @@
 %using MiniLanguage;
 %namespace GardensPoint
 
-IntNumber   [0-9]+
-RealNumber  [0-9]+\.[0-9]+
-Ident       ("@"|"$")[a-z]
-PrintErr    "print"("@"|"$"|[a-z0-9])[a-z0-9]*
+Ident       [a-zA-Z]([a-zA-Z0-9])*
 
 %%
 
-{IntNumber}   { yylval.type=IntMiniType; return (int)Tokens.IntNumber; }
-{RealNumber}  { yylval.type=DoubleMiniType; return (int)Tokens.RealNumber; }
+"program"     { return (int)Tokens.Program; }
+"int"         { yylval.type=new IntMiniType(); return (int)Tokens.Type; }
+"double"      { yylval.type=new DoubleMiniType(); return (int)Tokens.Type; }
+"bool"        { yylval.type=new BoolMiniType(); return (int)Tokens.Type; }
+"{"           { return (int)Tokens.OpenBrace; }
+"}"           { return (int)Tokens.CloseBrace; }
+","           { return (int)Tokens.Comma; }
+";"           { return (int)Tokens.Semicolon; }
+
 {Ident}       { yylval.str=yytext; return (int)Tokens.Ident; }
-"="           { return (int)Tokens.Assign; }
-"+"           { return (int)Tokens.Plus; }
-"-"           { return (int)Tokens.Minus; }
-"*"           { return (int)Tokens.Multiplies; }
-"/"           { return (int)Tokens.Divides; }
-"("           { return (int)Tokens.OpenPar; }
-")"           { return (int)Tokens.ClosePar; }
-"\r"          { return (int)Tokens.Endl; }
-<<EOF>>       { return (int)Tokens.Eof; }
+
+<<EOF>>       { return (int)Tokens.EOF; }
+"\r"          { }
 " "           { }
 "\t"          { }
-{PrintErr}    { return (int)Tokens.Error; }
-.             { return (int)Tokens.Error; }
+"\n"          { }
+.             { return (int)Tokens.error; }
