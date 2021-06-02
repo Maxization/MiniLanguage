@@ -108,14 +108,9 @@ namespace MiniLanguage
     public class SyntaxTreeGenerator
     {
         private static int nr;
-        private Dictionary<string, Declaration> Declarations { get; }
+        private static Dictionary<string, Declaration> Declarations = new Dictionary<string, Declaration>();
 
-        public SyntaxTreeGenerator()
-        {
-            Declarations = new Dictionary<string, Declaration>();
-        }
-
-        public static string NewTemp(string prefix) => $"{prefix}_{++nr}";
+        public static string NewName(string prefix) => $"{prefix}_{++nr}";
 
         public Declaration AddDeclaration(string name, AbstractMiniType type)
         {
@@ -125,7 +120,7 @@ namespace MiniLanguage
                 return null;
             }
 
-            string uniqueName = NewTemp(name);
+            string uniqueName = NewName(name);
 
             Identifier ident = new Identifier(uniqueName, type);
             Declaration dec = new Declaration(ident);
@@ -138,6 +133,7 @@ namespace MiniLanguage
         {
             if(!Declarations.ContainsKey(name))
             {
+                // TODO: Not throw exception
                 throw new InvalidOperationException("undeclared variable");
             }
             return Declarations[name].Identifier;
@@ -148,16 +144,35 @@ namespace MiniLanguage
     public interface IVisitor
     {
         void Visit(Program program);
+        void Visit(MainBlock mainBlock);
         void Visit(Block block);
         void Visit(Declaration declaration);
+        void Visit(Const constant);
+        void Visit(Assignment assignment);
     }
 
     public class CodeGenerator : IVisitor
     {
+        private static int nr;
         private static StreamWriter sw;
         public static void EmitCode(string instr = null) => sw.WriteLine(instr);
         public static void EmitCode(string instr, params object[] args) => sw.WriteLine(instr, args);
+        private static string NewTmp() => $"tmp_{++nr}";
+        private string GetType(AbstractMiniType type)
+        {
+            switch(type.ToString())
+            {
+                case "int":
+                    return "i32";
+                case "double":
+                    return "double";
+                case "bool":
+                    return "i1";
+            }
 
+            // TODO: Change
+            return "";
+        }
         public CodeGenerator(StreamWriter streamWriter)
         {
             sw = streamWriter;
@@ -172,23 +187,41 @@ namespace MiniLanguage
         private void GenProlog()
         {
             EmitCode("; prolog");
+            EmitCode("@int_res = constant [2 x i8] c\"%d\"");
             EmitCode("declare i32 @printf(i8*, ...)");
             EmitCode("define i32 @main()");
+            EmitCode("{");
+            EmitCode("%int = alloca i32");
+            EmitCode("%double = alloca double");
+            EmitCode("%bool = alloca i1");
+            
+        }
+
+        private void GenEpilog()
+        {
+            EmitCode("ret i32 0");
+            EmitCode("}");
         }
 
         public void Visit(Program program)
         {
             GenProlog();
             program.MainBody.Accept(this);
+            GenEpilog();
+        }
+
+        public void Visit(MainBlock mainBlock)
+        {
+            foreach (INode node in mainBlock.Declarations)
+                node.Accept(this);
+            foreach (INode node in mainBlock.Statements)
+                node.Accept(this);
         }
 
         public void Visit(Block block)
         {
-            EmitCode("{");
             foreach (INode node in block.Statements)
                 node.Accept(this);
-            EmitCode("ret i32 0");
-            EmitCode("}");
         }
 
         public void Visit(Declaration declaration)
@@ -208,6 +241,24 @@ namespace MiniLanguage
             }
             EmitCode(code);
         }
+
+        public void Visit(Const constant)
+        {
+            string type = GetType(constant.Identifier.Type);
+
+            EmitCode($"store {type} {constant.Value}, {type}* %{constant.Identifier.Name}");
+        }
+
+        public void Visit(Assignment assignment)
+        {
+            assignment.Right.Accept(this);
+            var tmp = NewTmp();
+            var type = GetType(assignment.Right.Identifier.Type);
+
+            // TODO: Check types etc.
+            EmitCode($"%{tmp} = load {type}, {type}* %{assignment.Right.Identifier.Name}");
+            EmitCode($"store {type} %{tmp}, {type}* %{assignment.Left.Identifier.Name}");
+        }
     }
 
     #endregion
@@ -219,9 +270,23 @@ namespace MiniLanguage
 
     public class Program : INode
     {
-        public Block MainBody { get; set; }
+        public MainBlock MainBody { get; set; }
 
-        public Program(Block body) => MainBody = body;
+        public Program(MainBlock body) => MainBody = body;
+
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class MainBlock : INode
+    {
+        public List<INode> Declarations { get; }
+        public List<INode> Statements { get; }
+
+        public MainBlock(List<INode> declarations, List<INode> statements)
+        {
+            Declarations = declarations;
+            Statements = statements;
+        }
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
@@ -233,57 +298,6 @@ namespace MiniLanguage
         public Block(List<INode> statements) => Statements = statements;
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
-    }
-
-    public interface IEvaluable
-    {
-        AbstractMiniType Type { get; }
-        string Value { get; }
-    }
-
-    // TODO
-    public class Constant : IEvaluable
-    {
-        public AbstractMiniType Type { get; }
-        public string Value { get; }
-        public Constant(AbstractMiniType type, string value)
-        {
-            Type = type;
-            Value = value;
-        }
-    }
-
-    // TODO
-    public class Variable : IEvaluable
-    {
-        public Identifier Identifier { get; }
-        public string Value { get => Identifier.Name; }
-        public AbstractMiniType Type { get => Identifier.Type; }
-        public Variable(Identifier ident) => Identifier = ident;
-    }
-
-    // TODO
-    public class Assignment : INode
-    {
-        public string Name { get; }
-        public Assignment(string name, IEvaluable eval)
-        {
-
-        }
-        public void Accept(IVisitor visitor)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    // TODO
-    public class Write : INode
-    {
-        public Write(string exp)
-        {
-            
-        }
-        public void Accept(IVisitor visitor) { }
     }
 
     public class Declaration : INode
@@ -304,4 +318,69 @@ namespace MiniLanguage
             Type = type;
         }
     }
+
+    public class Const : IEvaluable
+    {
+        public string Value { get; }
+        public Identifier Identifier { get; }
+
+        private string ConvertHexToInt(string value)
+        {
+            int val = Int32.Parse(value.Substring(2), System.Globalization.NumberStyles.HexNumber);
+            return val.ToString();
+        }
+        public Const(string value, AbstractMiniType type, bool hex = false)
+        {
+            string type_str = type.ToString();
+            if (type_str == "int" && hex)
+            {
+                Value = ConvertHexToInt(value);
+            }
+            else if (type_str == "bool")
+            {
+                if(value == "true")
+                {
+                    Value = "1";
+                }
+                else
+                {
+                    Value = "0";
+                }
+                
+            }
+            else
+            {
+                Value = value;
+            }
+            
+            Identifier = new Identifier(type.ToString(), type);
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class Variable : IEvaluable
+    {
+        public Identifier Identifier { get; }
+        public Variable(Identifier ident) => Identifier = ident;
+        public void Accept(IVisitor visitor) { }
+    }
+
+    public interface IEvaluable: INode
+    {
+        Identifier Identifier { get; }
+    }
+
+    public class Assignment : INode
+    {
+        public IEvaluable Left { get; }
+        public IEvaluable Right { get; }
+        public Assignment(IEvaluable assignable, IEvaluable evaluable)
+        {
+            Left = assignable;
+            Right = evaluable;
+        }
+
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
 }

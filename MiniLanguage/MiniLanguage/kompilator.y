@@ -11,24 +11,27 @@
     public List<string> strList;
     public INode node;
     public List<INode> nodeList;
+    public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma
+%token Program OpenBrace CloseBrace Semicolon Comma Assign
 %token <type> Type
 %token <str> Ident
+%token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock
-%type <nodeList> declaration declarations
+%type <node> mainBlock assignment statement
+%type <nodeList> declaration declarations statements
 %type <strList> idents
+%type <eval> value
 
 %%
 
-start: Program mainBlock { Compiler.Program = new Program($2 as Block); }
+start: Program mainBlock { Compiler.Program = new Program($2 as MainBlock); }
      | Program error EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
      | EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
      ;
 
-mainBlock: OpenBrace declarations CloseBrace { $$ = new Block($2); }
+mainBlock: OpenBrace declarations statements CloseBrace { $$ = new MainBlock($2, $3); }
          | OpenBrace declarations error EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
          ;
 
@@ -42,6 +45,24 @@ declaration: Type idents Ident { $2.Add($3); $$ = $2.Select(name => Compiler.STG
 idents: idents Ident Comma { $1.Add($2); $$ = $1; }
       |                    { $$ = new List<string>(); }
       ;
+
+statements: statements statement { $1.Add($2); $$ = $1; }
+          |                      { $$ = new List<INode>(); }
+          ;
+
+statement: assignment Semicolon { $$ = $1; }
+         ;
+
+//block: OpenBrace lines CloseBrace { $$ = new Block($2); }
+//     ;
+
+assignment: Ident Assign value { $$ = new Assignment(new Variable(Compiler.STG.FindIdent($1)), $3); }
+          ;
+
+value: IntNum    { $$ = $1; }
+     | DoubleNum { $$ = $1; }
+     | Bool      { $$ = $1; }
+     ;
 
 %%
 
