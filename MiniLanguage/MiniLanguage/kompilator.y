@@ -19,10 +19,10 @@
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock assignment statement
+%type <node> mainBlock block statement
 %type <nodeList> declaration declarations statements
 %type <strList> idents
-%type <eval> value
+%type <eval> value assignment
 
 %%
 
@@ -51,17 +51,20 @@ statements: statements statement { $1.Add($2); $$ = $1; }
           ;
 
 statement: assignment Semicolon { $$ = $1; }
+         | block                { $$ = $1; }
          ;
 
-//block: OpenBrace lines CloseBrace { $$ = new Block($2); }
-//     ;
+block: OpenBrace statements CloseBrace { $$ = new Block($2); }
+     ;
 
 assignment: Ident Assign value { $$ = new Assignment(new Variable(Compiler.STG.FindIdent($1)), $3); }
           ;
 
-value: IntNum    { $$ = $1; }
-     | DoubleNum { $$ = $1; }
-     | Bool      { $$ = $1; }
+value: IntNum     { $$ = $1; }
+     | DoubleNum  { $$ = $1; }
+     | Bool       { $$ = $1; }
+     | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
+     | assignment { $$ = $1; }
      ;
 
 %%

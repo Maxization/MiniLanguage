@@ -5,15 +5,26 @@ using GardensPoint;
 
 namespace MiniLanguage
 {
+
     public class Compiler
     {
-        public static int errors = 0;
+        public static int errors;
         public static int linenum;
         private static StreamWriter sw;
         public static Program Program { get; set; }
         public static CodeGenerator codeGenerator { get; set; }
         public static SyntaxTreeGenerator STG => new SyntaxTreeGenerator();
         public static List<string> source;
+
+        public static void Reset()
+        {
+            errors = 0;
+            linenum = 0;
+            Program = null;
+            codeGenerator = null;
+            STG.Reset();
+            source = null;
+        }
 
         public static void PrintError(string message = null)
         {
@@ -27,6 +38,7 @@ namespace MiniLanguage
         // pozostałe argumenty są ignorowane
         public static int Main(string[] args)
         {
+            Reset();
             string file;
             FileStream source;
             Console.WriteLine("\nLLVM Code Generator for Mini Language");
@@ -112,6 +124,11 @@ namespace MiniLanguage
 
         public static string NewName(string prefix) => $"{prefix}_{++nr}";
 
+        public void Reset()
+        {
+            nr = 0;
+            Declarations = new Dictionary<string, Declaration>();
+        }
         public Declaration AddDeclaration(string name, AbstractMiniType type)
         {
             if(Declarations.ContainsKey(name))
@@ -370,10 +387,13 @@ namespace MiniLanguage
         Identifier Identifier { get; }
     }
 
-    public class Assignment : INode
+    public class Assignment : IEvaluable
     {
         public IEvaluable Left { get; }
         public IEvaluable Right { get; }
+
+        public Identifier Identifier => Left.Identifier;
+
         public Assignment(IEvaluable assignable, IEvaluable evaluable)
         {
             Left = assignable;
