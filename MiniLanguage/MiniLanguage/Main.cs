@@ -288,12 +288,8 @@ namespace MiniLanguage
         {
             logicAnd.Left.Accept(this);
             logicAnd.Right.Accept(this);
-            var tmp1 = Helper.NewTmp();
-            var tmp2 = Helper.NewTmp();
 
-            EmitCode($"%{tmp1} = load i1, i1* %{logicAnd.Left.Identifier.Name}");
-            EmitCode($"%{tmp2} = load i1, i1* %{logicAnd.Right.Identifier.Name}");
-            EmitCode($"%{logicAnd.Identifier.Name} = and i1 %{tmp1}, %{tmp2}");
+            EmitCode($"%{logicAnd.Identifier.Name} = and i1 %{logicAnd.Left.Identifier.Name}, %{logicAnd.Right.Identifier.Name}");
         }
 
         public void Visit(Variable variable)
