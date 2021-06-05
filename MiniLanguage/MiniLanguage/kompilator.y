@@ -14,12 +14,12 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock block statement
+%type <node> mainBlock block statement write
 %type <nodeList> declaration declarations statements
 %type <strList> idents
 %type <eval> value evaluable logicOp
@@ -51,8 +51,12 @@ statements: statements statement { $1.Add($2); $$ = $1; }
           ;
 
 statement: evaluable Semicolon { $$ = $1; }
-         | block                { $$ = $1; }
+         | block               { $$ = $1; }
+         | write               { $$ = $1; }
          ;
+
+write: Write evaluable Semicolon {$$ = new Write($2); }
+     ;
 
 block: OpenBrace statements CloseBrace { $$ = new Block($2); }
      ;
@@ -68,6 +72,7 @@ value: IntNum     { $$ = $1; }
      ;
 
 logicOp: logicOp And value { $$ = new LogicAnd($1, $3); }
+       | logicOp Or value  { $$ = new LogicOr($1, $3); }
        | value             { $$ = $1; }
        ;
 

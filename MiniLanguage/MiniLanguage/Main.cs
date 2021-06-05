@@ -160,8 +160,10 @@ namespace MiniLanguage
 
     public static class Helper
     {
+        private static int label_nr;
         private static int nr;
         public static string NewTmp() => $"tmp_{++nr}";
+        public static string NewLabel() => $"LABEL_{++label_nr}";
         public static string GetType(AbstractMiniType type)
         {
             switch (type.ToString())
@@ -187,7 +189,9 @@ namespace MiniLanguage
         void Visit(Const constant);
         void Visit(Assignment assignment);
         void Visit(LogicAnd logicAnd);
+        void Visit(LogicOr logicOr);
         void Visit(Variable variable);
+        void Visit(Write write);
     }
 
     public class CodeGenerator : IVisitor
@@ -211,6 +215,7 @@ namespace MiniLanguage
         {
             EmitCode("; prolog");
             EmitCode("@int_res = constant [2 x i8] c\"%d\"");
+            EmitCode("@bool_res = constant [2 x i8] c\"%d\"");
             EmitCode("declare i32 @printf(i8*, ...)");
             EmitCode("define i32 @main()");
             EmitCode("{");
@@ -287,15 +292,72 @@ namespace MiniLanguage
         public void Visit(LogicAnd logicAnd)
         {
             logicAnd.Left.Accept(this);
-            logicAnd.Right.Accept(this);
 
-            EmitCode($"%{logicAnd.Identifier.Name} = and i1 %{logicAnd.Left.Identifier.Name}, %{logicAnd.Right.Identifier.Name}");
+            var tmp = Helper.NewTmp();
+            var tmp2 = Helper.NewTmp();
+            var label_true = Helper.NewLabel();
+            var label_false = Helper.NewLabel();
+            var label_end = Helper.NewLabel();
+
+            EmitCode($"%{tmp} = icmp eq i1 %{logicAnd.Left.Identifier.Name}, 1");
+
+            EmitCode($"br i1 %{tmp}, label %{label_true}, label %{label_false}");
+
+            EmitCode($"{label_false}:");
+            EmitCode($"store i1 0, i1* %bool");
+            EmitCode($"br label %{label_end}");
+
+            EmitCode($"{label_true}:");
+            logicAnd.Right.Accept(this);
+            EmitCode($"%{tmp2} = and i1 %{logicAnd.Left.Identifier.Name}, %{logicAnd.Right.Identifier.Name}");
+            EmitCode($"store i1 %{tmp2}, i1* %bool");
+            EmitCode($"br label %{label_end}");
+
+            EmitCode($"{label_end}:");
+            EmitCode($"%{logicAnd.Identifier.Name} = load i1, i1* %bool");
+        }
+
+        public void Visit(LogicOr logicOr)
+        {
+            logicOr.Left.Accept(this);
+
+            var tmp = Helper.NewTmp();
+            var tmp2 = Helper.NewTmp();
+            var label_true = Helper.NewLabel();
+            var label_false = Helper.NewLabel();
+            var label_end = Helper.NewLabel();
+
+            EmitCode($"%{tmp} = icmp eq i1 %{logicOr.Left.Identifier.Name}, 1");
+
+            EmitCode($"br i1 %{tmp}, label %{label_true}, label %{label_false}");
+
+            EmitCode($"{label_true}:");
+            EmitCode($"store i1 1, i1* %bool");
+            EmitCode($"br label %{label_end}");
+
+            EmitCode($"{label_false}:");
+            logicOr.Right.Accept(this);
+            EmitCode($"%{tmp2} = or i1 %{logicOr.Left.Identifier.Name}, %{logicOr.Right.Identifier.Name}");
+            EmitCode($"store i1 %{tmp2}, i1* %bool");
+            EmitCode($"br label %{label_end}");
+
+            EmitCode($"{label_end}:");
+            EmitCode($"%{logicOr.Identifier.Name} = load i1, i1* %bool");
         }
 
         public void Visit(Variable variable)
         {
             var type = Helper.GetType(variable.Type);
             EmitCode($"%{variable.Identifier.Name} = load {type}, {type}* %{variable.Name}");
+        }
+
+        public void Visit(Write write)
+        {
+            write.Evaluable.Accept(this);
+
+            var type = Helper.GetType(write.Evaluable.Identifier.Type);
+            EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([2 x i8]* @{write.Evaluable.Identifier.Type}_res to i8*)," +
+                $" {type} %{write.Evaluable.Identifier.Name})");
         }
     }
 
@@ -425,10 +487,11 @@ namespace MiniLanguage
         AbstractMiniType Type { get; }
     }
 
-    public interface BinaryOperator
+    public class Write : INode
     {
-        IEvaluable Left { get; }
-        IEvaluable Right { get; }
+        public IEvaluable Evaluable { get; }
+        public Write(IEvaluable eval) => Evaluable = eval;
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
     public class Assignment : IEvaluable
@@ -447,18 +510,41 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
-    public class LogicAnd : IEvaluable, BinaryOperator
+    public interface BinaryOperator
+    {
+        IEvaluable Left { get; }
+        IEvaluable Right { get; }
+    }
+
+    public abstract class LogicOp : BinaryOperator
     {
         public IEvaluable Left { get; }
-        public IEvaluable Right { get;  }
-        public Identifier Identifier { get; }
+        public IEvaluable Right { get; }
 
-        public LogicAnd(IEvaluable eval1, IEvaluable eval2)
+        public LogicOp(IEvaluable eval1, IEvaluable eval2)
         {
             // TODO: Verify types
-            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
             Left = eval1;
             Right = eval2;
+        }
+    }
+    public class LogicAnd : LogicOp, IEvaluable
+    {
+        public Identifier Identifier { get; }
+
+        public LogicAnd(IEvaluable eval1, IEvaluable eval2): base(eval1, eval2)
+        {
+            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class LogicOr : LogicOp, IEvaluable
+    {
+        public Identifier Identifier { get; }
+        public LogicOr(IEvaluable eval1, IEvaluable eval2) : base(eval1, eval2)
+        {
+            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
         }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }

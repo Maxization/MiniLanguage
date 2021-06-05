@@ -24,6 +24,7 @@ String      ".*"
 "="           { return (int)Tokens.Assign; }
 "&&"          { return (int)Tokens.And; }
 "||"          { return (int)Tokens.Or; }
+"write"       { return (int)Tokens.Write; }
 
 {Bool}        { yylval.eval=new Const(yytext, new BoolMiniType()); return (int)Tokens.Bool; }
 {Int}         { yylval.eval=new Const(yytext, new IntMiniType()); return (int)Tokens.IntNum; }
