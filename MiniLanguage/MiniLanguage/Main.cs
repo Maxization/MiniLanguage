@@ -124,6 +124,7 @@ namespace MiniLanguage
 
         public static string NewName(string prefix) => $"{prefix}_{++nr}";
 
+
         public void Reset()
         {
             nr = 0;
@@ -157,6 +158,25 @@ namespace MiniLanguage
         }
     }
 
+    public static class Helper
+    {
+        private static int nr;
+        public static string NewTmp() => $"tmp_{++nr}";
+        public static string GetType(AbstractMiniType type)
+        {
+            switch (type.ToString())
+            {
+                case "double":
+                    return "double";
+                case "bool":
+                    return "i1";
+                case "int":
+                default:
+                    return "i32";
+            }
+        }
+    }
+
     #region visitor
     public interface IVisitor
     {
@@ -166,30 +186,16 @@ namespace MiniLanguage
         void Visit(Declaration declaration);
         void Visit(Const constant);
         void Visit(Assignment assignment);
+        void Visit(LogicAnd logicAnd);
+        void Visit(Variable variable);
     }
 
     public class CodeGenerator : IVisitor
     {
-        private static int nr;
         private static StreamWriter sw;
         public static void EmitCode(string instr = null) => sw.WriteLine(instr);
         public static void EmitCode(string instr, params object[] args) => sw.WriteLine(instr, args);
-        private static string NewTmp() => $"tmp_{++nr}";
-        private string GetType(AbstractMiniType type)
-        {
-            switch(type.ToString())
-            {
-                case "int":
-                    return "i32";
-                case "double":
-                    return "double";
-                case "bool":
-                    return "i1";
-            }
-
-            // TODO: Change
-            return "";
-        }
+        
         public CodeGenerator(StreamWriter streamWriter)
         {
             sw = streamWriter;
@@ -261,20 +267,39 @@ namespace MiniLanguage
 
         public void Visit(Const constant)
         {
-            string type = GetType(constant.Identifier.Type);
+            string type = Helper.GetType(constant.Identifier.Type);
 
-            EmitCode($"store {type} {constant.Value}, {type}* %{constant.Identifier.Name}");
+            EmitCode($"store {type} {constant.Value}, {type}* %{constant.Identifier.Type}");
+            EmitCode($"%{constant.Identifier.Name} = load {type}, {type}* %{constant.Identifier.Type}");
         }
 
         public void Visit(Assignment assignment)
         {
             assignment.Right.Accept(this);
-            var tmp = NewTmp();
-            var type = GetType(assignment.Right.Identifier.Type);
+
+            var type = Helper.GetType(assignment.Right.Identifier.Type);
 
             // TODO: Check types etc.
-            EmitCode($"%{tmp} = load {type}, {type}* %{assignment.Right.Identifier.Name}");
-            EmitCode($"store {type} %{tmp}, {type}* %{assignment.Left.Identifier.Name}");
+            EmitCode($"store {type} %{assignment.Right.Identifier.Name}, {type}* %{assignment.Left.Name}");
+            assignment.Left.Accept(this);
+        }
+
+        public void Visit(LogicAnd logicAnd)
+        {
+            logicAnd.Left.Accept(this);
+            logicAnd.Right.Accept(this);
+            var tmp1 = Helper.NewTmp();
+            var tmp2 = Helper.NewTmp();
+
+            EmitCode($"%{tmp1} = load i1, i1* %{logicAnd.Left.Identifier.Name}");
+            EmitCode($"%{tmp2} = load i1, i1* %{logicAnd.Right.Identifier.Name}");
+            EmitCode($"%{logicAnd.Identifier.Name} = and i1 %{tmp1}, %{tmp2}");
+        }
+
+        public void Visit(Variable variable)
+        {
+            var type = Helper.GetType(variable.Type);
+            EmitCode($"%{variable.Identifier.Name} = load {type}, {type}* %{variable.Name}");
         }
     }
 
@@ -370,16 +395,27 @@ namespace MiniLanguage
                 Value = value;
             }
             
-            Identifier = new Identifier(type.ToString(), type);
+            Identifier = new Identifier(Helper.NewTmp(), type);
         }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
-    public class Variable : IEvaluable
+    public class Variable : IEvaluable, IAssignable
     {
         public Identifier Identifier { get; }
-        public Variable(Identifier ident) => Identifier = ident;
-        public void Accept(IVisitor visitor) { }
+
+        public string Name { get; }
+
+        public AbstractMiniType Type { get; }
+
+        public Variable(Identifier ident)
+        {
+            Name = ident.Name;
+            Type = ident.Type;
+
+            Identifier = new Identifier(Helper.NewTmp(), Type);
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
     public interface IEvaluable: INode
@@ -387,14 +423,26 @@ namespace MiniLanguage
         Identifier Identifier { get; }
     }
 
+    public interface IAssignable: IEvaluable
+    {
+        string Name { get; }
+        AbstractMiniType Type { get; }
+    }
+
+    public interface BinaryOperator
+    {
+        IEvaluable Left { get; }
+        IEvaluable Right { get; }
+    }
+
     public class Assignment : IEvaluable
     {
-        public IEvaluable Left { get; }
+        public IAssignable Left { get; }
         public IEvaluable Right { get; }
 
         public Identifier Identifier => Left.Identifier;
 
-        public Assignment(IEvaluable assignable, IEvaluable evaluable)
+        public Assignment(IAssignable assignable, IEvaluable evaluable)
         {
             Left = assignable;
             Right = evaluable;
@@ -403,4 +451,19 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
+    public class LogicAnd : IEvaluable, BinaryOperator
+    {
+        public IEvaluable Left { get; }
+        public IEvaluable Right { get;  }
+        public Identifier Identifier { get; }
+
+        public LogicAnd(IEvaluable eval1, IEvaluable eval2)
+        {
+            // TODO: Verify types
+            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
+            Left = eval1;
+            Right = eval2;
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
 }

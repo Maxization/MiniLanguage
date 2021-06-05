@@ -14,7 +14,7 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
@@ -22,7 +22,7 @@
 %type <node> mainBlock block statement
 %type <nodeList> declaration declarations statements
 %type <strList> idents
-%type <eval> value assignment
+%type <eval> value evaluable logicOp
 
 %%
 
@@ -50,22 +50,26 @@ statements: statements statement { $1.Add($2); $$ = $1; }
           |                      { $$ = new List<INode>(); }
           ;
 
-statement: assignment Semicolon { $$ = $1; }
+statement: evaluable Semicolon { $$ = $1; }
          | block                { $$ = $1; }
          ;
 
 block: OpenBrace statements CloseBrace { $$ = new Block($2); }
      ;
 
-assignment: Ident Assign value { $$ = new Assignment(new Variable(Compiler.STG.FindIdent($1)), $3); }
-          ;
+evaluable: Ident Assign evaluable { $$ = new Assignment(new Variable(Compiler.STG.FindIdent($1)), $3); }
+         | logicOp                { $$ = $1; }
+         ;
 
 value: IntNum     { $$ = $1; }
      | DoubleNum  { $$ = $1; }
      | Bool       { $$ = $1; }
      | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
-     | assignment { $$ = $1; }
      ;
+
+logicOp: logicOp And value { $$ = new LogicAnd($1, $3); }
+       | value             { $$ = $1; }
+       ;
 
 %%
 

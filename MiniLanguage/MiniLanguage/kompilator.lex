@@ -22,6 +22,8 @@ String      ".*"
 ","           { return (int)Tokens.Comma; }
 ";"           { return (int)Tokens.Semicolon; }
 "="           { return (int)Tokens.Assign; }
+"&&"          { return (int)Tokens.And; }
+"||"          { return (int)Tokens.Or; }
 
 {Bool}        { yylval.eval=new Const(yytext, new BoolMiniType()); return (int)Tokens.Bool; }
 {Int}         { yylval.eval=new Const(yytext, new IntMiniType()); return (int)Tokens.IntNum; }
