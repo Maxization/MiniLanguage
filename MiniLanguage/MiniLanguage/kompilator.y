@@ -14,7 +14,7 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write Equal
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
@@ -22,7 +22,7 @@
 %type <node> mainBlock block statement write
 %type <nodeList> declaration declarations statements
 %type <strList> idents
-%type <eval> value evaluable logicOp
+%type <eval> value evaluable logicOp relationOp
 
 %%
 
@@ -71,10 +71,14 @@ value: IntNum     { $$ = $1; }
      | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
      ;
 
-logicOp: logicOp And value { $$ = new LogicAnd($1, $3); }
-       | logicOp Or value  { $$ = new LogicOr($1, $3); }
-       | value             { $$ = $1; }
+logicOp: logicOp And relationOp { $$ = new LogicAnd($1, $3); }
+       | logicOp Or relationOp  { $$ = new LogicOr($1, $3); }
+       | relationOp             { $$ = $1; }
        ;
+
+relationOp: relationOp Equal value { }
+          | value                  { $$ = $1; }
+          ;
 
 %%
 

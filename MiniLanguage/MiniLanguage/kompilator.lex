@@ -17,19 +17,21 @@ String      ".*"
 "int"         { yylval.type=new IntMiniType(); return (int)Tokens.Type; }
 "double"      { yylval.type=new DoubleMiniType(); return (int)Tokens.Type; }
 "bool"        { yylval.type=new BoolMiniType(); return (int)Tokens.Type; }
+"write"       { return (int)Tokens.Write; }
 "{"           { return (int)Tokens.OpenBrace; }
 "}"           { return (int)Tokens.CloseBrace; }
 ","           { return (int)Tokens.Comma; }
 ";"           { return (int)Tokens.Semicolon; }
+"=="          { return (int)Tokens.Equal; }
 "="           { return (int)Tokens.Assign; }
 "&&"          { return (int)Tokens.And; }
 "||"          { return (int)Tokens.Or; }
-"write"       { return (int)Tokens.Write; }
 
-{Bool}        { yylval.eval=new Const(yytext, new BoolMiniType()); return (int)Tokens.Bool; }
-{Int}         { yylval.eval=new Const(yytext, new IntMiniType()); return (int)Tokens.IntNum; }
-{Double}      { yylval.eval=new Const(yytext, new DoubleMiniType()); return (int)Tokens.DoubleNum; }
-{Hex}         { yylval.eval=new Const(yytext, new IntMiniType(), true); return (int)Tokens.IntNum; }
+
+{Bool}        { yylval.eval=new Const(yytext, MiniTypes.Bool); return (int)Tokens.Bool; }
+{Int}         { yylval.eval=new Const(yytext, MiniTypes.Int); return (int)Tokens.IntNum; }
+{Double}      { yylval.eval=new Const(yytext, MiniTypes.Double); return (int)Tokens.DoubleNum; }
+{Hex}         { yylval.eval=new Const(yytext, MiniTypes.Int, true); return (int)Tokens.IntNum; }
 {Ident}       { yylval.str=yytext; return (int)Tokens.Ident; }
 
 

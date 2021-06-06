@@ -1,0 +1,8 @@
+program {
+	bool a,b,c,d;
+	a = true;
+	b = false;
+	
+	c = a && b;
+	d = c || a;
+}
