@@ -14,7 +14,8 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write Equal
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write 
+%token Equal NotEqual Greater GreaterEqual Less LessEqual
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
@@ -76,8 +77,13 @@ logicOp: logicOp And relationOp { $$ = new LogicAnd($1, $3); }
        | relationOp             { $$ = $1; }
        ;
 
-relationOp: relationOp Equal value { }
-          | value                  { $$ = $1; }
+relationOp: relationOp Equal value        { $$ = new RelationOp($1, $3, Relation.Equal); }
+          | relationOp NotEqual value     { $$ = new RelationOp($1, $3, Relation.NotEqual); }
+          | relationOp Greater value      { $$ = new RelationOp($1, $3, Relation.Greater); }
+          | relationOp GreaterEqual value { $$ = new RelationOp($1, $3, Relation.GreaterEqual); }
+          | relationOp Less value         { $$ = new RelationOp($1, $3, Relation.Less); }
+          | relationOp LessEqual value    { $$ = new RelationOp($1, $3, Relation.LessEqual); }
+          | value                         { $$ = $1; }
           ;
 
 %%

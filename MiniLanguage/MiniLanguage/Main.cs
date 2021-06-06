@@ -205,6 +205,39 @@ namespace MiniLanguage
                 return "i32";
             }
         }
+    
+        public static string GetRelation(Relation relation, AbstractMiniType type)
+        {
+            bool isDouble = type == MiniTypes.Double;
+            switch(relation)
+            {
+                case Relation.Equal:
+                    if (isDouble)
+                        return "oeq";
+                    return "eq";
+                case Relation.NotEqual:
+                    if (isDouble)
+                        return "one";
+                    return "ne";
+                case Relation.Greater:
+                    if (isDouble)
+                        return "ogt";
+                    return "sgt";
+                case Relation.GreaterEqual:
+                    if (isDouble)
+                        return "oge";
+                    return "sge";
+                case Relation.Less:
+                    if (isDouble)
+                        return "olt";
+                    return "slt";
+                default:
+                case Relation.LessEqual:
+                    if (isDouble)
+                        return "ole";
+                    return "sle";
+            }
+        }
     }
 
     #region visitor
@@ -220,7 +253,7 @@ namespace MiniLanguage
         void Visit(LogicOr logicOr);
         void Visit(Variable variable);
         void Visit(Write write);
-        void Visit(RelationEqual relationEqual);
+        void Visit(RelationOp relationEqual);
     }
 
     public class CodeGenerator : IVisitor
@@ -239,13 +272,20 @@ namespace MiniLanguage
             program.Accept(this);
         }
 
+        public string EmitIntToDouble(string ident_int)
+        {
+            var tmp = Helper.NewTmp();
+            EmitCode($"%{tmp} = uitofp i32 %{ident_int} to double");
+            return tmp;
+        }
         
         private void GenProlog()
         {
             EmitCode("; prolog");
             EmitCode("@int_res = constant [2 x i8] c\"%d\"");
-            EmitCode("@bool_res = constant [2 x i8] c\"%d\"");
             EmitCode("@double_res = constant [2 x i8] c\"%f\"");
+            EmitCode("@true_res = constant [5 x i8] c\"true\\00\"");
+            EmitCode("@false_res = constant [6 x i8] c\"false\\00\"");
             EmitCode("declare i32 @printf(i8*, ...)");
             EmitCode("define i32 @main()");
             EmitCode("{");
@@ -369,21 +409,68 @@ namespace MiniLanguage
             EmitCode($"%{logicOr.Identifier.Name} = load i1, i1* %bool");
         }
 
-        public void Visit(RelationEqual relationEqual)
+        public void Visit(RelationOp relationOp)
         {
-            relationEqual.Left.Accept(this);
-            relationEqual.Right.Accept(this);
+            relationOp.Left.Accept(this);
+            relationOp.Right.Accept(this);
 
+            string tmp1 = relationOp.Left.Identifier.Name;
+            string tmp2 = relationOp.Right.Identifier.Name;
 
+            AbstractMiniType leftType = relationOp.Left.Identifier.Type;
+            AbstractMiniType rightType = relationOp.Right.Identifier.Type;
+
+            if(leftType == MiniTypes.Double || rightType == MiniTypes.Double)
+            {
+                if (leftType == MiniTypes.Double && rightType == MiniTypes.Int)
+                {
+                    tmp2 = EmitIntToDouble(relationOp.Right.Identifier.Name);
+                }
+                else if (rightType == MiniTypes.Double && leftType == MiniTypes.Int)
+                {
+                    tmp1 = EmitIntToDouble(relationOp.Left.Identifier.Name);
+                }
+                var relation = Helper.GetRelation(relationOp.Relation, MiniTypes.Double);
+                EmitCode($"%{relationOp.Identifier.Name} = fcmp {relation} double %{tmp1}, %{tmp2}");
+            } 
+            else if (leftType == MiniTypes.Int)
+            {
+                var relation = Helper.GetRelation(relationOp.Relation, MiniTypes.Int);
+                EmitCode($"%{relationOp.Identifier.Name} = icmp {relation} i32 %{tmp1}, %{tmp2}");
+            }
+            else
+            {
+                var relation = Helper.GetRelation(relationOp.Relation, MiniTypes.Bool);
+                EmitCode($"%{relationOp.Identifier.Name} = icmp {relation} i1 %{tmp1}, %{tmp2}");
+            }
         }
 
         public void Visit(Write write)
         {
             write.Evaluable.Accept(this);
 
-            var type = Helper.GetType(write.Evaluable.Identifier.Type);
-            EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([2 x i8]* @{write.Evaluable.Identifier.Type}_res to i8*)," +
+            var type = write.Evaluable.Identifier.Type;
+            if(type == MiniTypes.Bool)
+            {
+                var label_true = Helper.NewLabel();
+                var label_false = Helper.NewLabel();
+                var label_end = Helper.NewLabel();
+                EmitCode($"br i1 %{write.Evaluable.Identifier.Name}, label %{label_true}, label %{label_false}");
+                EmitCode($"{label_true}:");
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @true_res to i8*))");
+                EmitCode($"br label %{label_end}");
+                EmitCode($"{label_false}:");
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([6 x i8]* @false_res to i8*))");
+                EmitCode($"br label %{label_end}");
+                EmitCode($"{label_end}:");
+
+            }
+            else
+            {
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([2 x i8]* @{write.Evaluable.Identifier.Type}_res to i8*)," +
                 $" {type} %{write.Evaluable.Identifier.Name})");
+            }
+            
         }
 
     }
@@ -587,26 +674,50 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
-    public class RelationEqual : IEvaluable, IBinaryOperator
+    public enum Relation
     {
+        Equal,
+        NotEqual,
+        Greater,
+        GreaterEqual,
+        Less,
+        LessEqual
+    }
+
+    public class RelationOp : IEvaluable, IBinaryOperator
+    {
+        public Relation Relation { get; }
         public Identifier Identifier { get; }
 
         public IEvaluable Left { get; }
 
         public IEvaluable Right { get; }
 
-        public RelationEqual(IEvaluable eval1, IEvaluable eval2)
+        public RelationOp(IEvaluable eval1, IEvaluable eval2, Relation relation)
         {
+            Relation = relation;
             Identifier = new Identifier(Helper.NewTmp(), MiniTypes.Bool);
             Left = eval1;
             Right = eval2;
 
-            if((eval1.Identifier.Type == MiniTypes.Bool && eval2.Identifier.Type != MiniTypes.Bool) ||
-               (eval2.Identifier.Type == MiniTypes.Bool && eval1.Identifier.Type != MiniTypes.Bool))
+            var leftType = eval1.Identifier.Type;
+            var rightType = eval2.Identifier.Type;
+
+            if(relation == Relation.Equal || relation == Relation.NotEqual)
+            {
+                if ((leftType == MiniTypes.Bool && rightType != MiniTypes.Bool) ||
+                    (rightType == MiniTypes.Bool && leftType != MiniTypes.Bool))
+                {
+                    Compiler.errors++;
+                    Compiler.PrintError("Invalid types");
+                }
+            }
+            else if (leftType == MiniTypes.Bool || rightType == MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
             }
+            
         }
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);

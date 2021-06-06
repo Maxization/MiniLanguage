@@ -22,10 +22,18 @@ String      ".*"
 "}"           { return (int)Tokens.CloseBrace; }
 ","           { return (int)Tokens.Comma; }
 ";"           { return (int)Tokens.Semicolon; }
+
 "=="          { return (int)Tokens.Equal; }
-"="           { return (int)Tokens.Assign; }
+"!="          { return (int)Tokens.NotEqual; }
+">"           { return (int)Tokens.Greater; }
+">="          { return (int)Tokens.GreaterEqual; }
+"<"           { return (int)Tokens.Less; }
+"<="          { return (int)Tokens.LessEqual; }
+
 "&&"          { return (int)Tokens.And; }
 "||"          { return (int)Tokens.Or; }
+
+"="           { return (int)Tokens.Assign; }
 
 
 {Bool}        { yylval.eval=new Const(yytext, MiniTypes.Bool); return (int)Tokens.Bool; }
