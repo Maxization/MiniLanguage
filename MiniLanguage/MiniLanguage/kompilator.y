@@ -16,6 +16,10 @@
 
 %token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write 
 %token Equal NotEqual Greater GreaterEqual Less LessEqual
+%token Add Sub
+%token Mul Div
+%token BitAnd BitOr
+%token Minus BitNegation LogicNegation
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
@@ -23,7 +27,7 @@
 %type <node> mainBlock block statement write
 %type <nodeList> declaration declarations statements
 %type <strList> idents
-%type <eval> value evaluable logicOp relationOp
+%type <eval> value evaluable logicOp relationOp additiveOp multiplicativeOp bitwiseOp unaryOp
 
 %%
 
@@ -77,14 +81,36 @@ logicOp: logicOp And relationOp { $$ = new LogicAnd($1, $3); }
        | relationOp             { $$ = $1; }
        ;
 
-relationOp: relationOp Equal value        { $$ = new RelationOp($1, $3, Relation.Equal); }
-          | relationOp NotEqual value     { $$ = new RelationOp($1, $3, Relation.NotEqual); }
-          | relationOp Greater value      { $$ = new RelationOp($1, $3, Relation.Greater); }
-          | relationOp GreaterEqual value { $$ = new RelationOp($1, $3, Relation.GreaterEqual); }
-          | relationOp Less value         { $$ = new RelationOp($1, $3, Relation.Less); }
-          | relationOp LessEqual value    { $$ = new RelationOp($1, $3, Relation.LessEqual); }
-          | value                         { $$ = $1; }
+relationOp: relationOp Equal additiveOp        { $$ = new RelationOp($1, $3, Relation.Equal); }
+          | relationOp NotEqual additiveOp     { $$ = new RelationOp($1, $3, Relation.NotEqual); }
+          | relationOp Greater additiveOp      { $$ = new RelationOp($1, $3, Relation.Greater); }
+          | relationOp GreaterEqual additiveOp { $$ = new RelationOp($1, $3, Relation.GreaterEqual); }
+          | relationOp Less additiveOp         { $$ = new RelationOp($1, $3, Relation.Less); }
+          | relationOp LessEqual additiveOp    { $$ = new RelationOp($1, $3, Relation.LessEqual); }
+          | additiveOp                         { $$ = $1; }
           ;
+
+additiveOp: additiveOp Add multiplicativeOp { $$ = new AdditiveOp($1, $3, Additive.Add); }
+          | additiveOp Sub multiplicativeOp { $$ = new AdditiveOp($1, $3, Additive.Sub); }
+          | multiplicativeOp                { $$ = $1; }
+          ;
+
+multiplicativeOp: multiplicativeOp Mul bitwiseOp { $$ = new MultiplicativeOp($1, $3, Multiplicative.Mul); }
+                | multiplicativeOp Div bitwiseOp { $$ = new MultiplicativeOp($1, $3, Multiplicative.Div); }
+                | bitwiseOp                      { $$ = $1; }
+                ;
+
+bitwiseOp: bitwiseOp BitAnd unarOp { $$ = new BitwiseOp($1, $3, Bitwise.And); }
+         | bitwiseOp BitOr unarOp  { $$ = new BitwiseOp($1, $3, Bitwise.Or); }
+         | unarOp                  { $$ = $1; }
+         ;
+
+unarOp: Minus unarOp          {}
+      | BitNegation unaryOp   {}
+      | LogicNegation unaryOp {}
+      | value                 {}
+      ;
+
 
 %%
 

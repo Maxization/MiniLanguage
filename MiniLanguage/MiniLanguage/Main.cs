@@ -238,6 +238,52 @@ namespace MiniLanguage
                     return "sle";
             }
         }
+
+        public static string GetAdditive(Additive additive, AbstractMiniType type)
+        {
+            bool isDouble = type == MiniTypes.Double;
+            switch(additive)
+            {
+                case Additive.Add:
+                    if (isDouble)
+                        return "fadd";
+                    return "add";
+                default:
+                case Additive.Sub:
+                    if (isDouble)
+                        return "fsub";
+                    return "sub";
+            }
+        }
+
+        public static string GetMultiplicative(Multiplicative multiplicative, AbstractMiniType type)
+        {
+            bool isDouble = type == MiniTypes.Double;
+            switch(multiplicative)
+            {
+                case Multiplicative.Mul:
+                    if (isDouble)
+                        return "fmul";
+                    return "mul";
+                default:
+                case Multiplicative.Div:
+                    if (isDouble)
+                        return "fdiv";
+                    return "sdiv";
+            }
+        }
+
+        public static string GetBitwise(Bitwise bitwise)
+        {
+            switch(bitwise)
+            {
+                case Bitwise.And:
+                    return "and";
+                default:
+                case Bitwise.Or:
+                    return "or";
+            }
+        }
     }
 
     #region visitor
@@ -253,7 +299,11 @@ namespace MiniLanguage
         void Visit(LogicOr logicOr);
         void Visit(Variable variable);
         void Visit(Write write);
-        void Visit(RelationOp relationEqual);
+        void Visit(RelationOp relationOp);
+        void Visit(AdditiveOp additiveOp);
+        void Visit(MultiplicativeOp multiplicativeOp);
+        void Visit(BitwiseOp bitwiseOp);
+        void Visit(UnaryOp unaryOp);
     }
 
     public class CodeGenerator : IVisitor
@@ -282,8 +332,8 @@ namespace MiniLanguage
         private void GenProlog()
         {
             EmitCode("; prolog");
-            EmitCode("@int_res = constant [2 x i8] c\"%d\"");
-            EmitCode("@double_res = constant [2 x i8] c\"%f\"");
+            EmitCode("@int_res = constant [3 x i8] c\"%d\\00\"");
+            EmitCode("@double_res = constant [3 x i8] c\"%f\\00\"");
             EmitCode("@true_res = constant [5 x i8] c\"true\\00\"");
             EmitCode("@false_res = constant [6 x i8] c\"false\\00\"");
             EmitCode("declare i32 @printf(i8*, ...)");
@@ -467,10 +517,123 @@ namespace MiniLanguage
             }
             else
             {
-                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([2 x i8]* @{write.Evaluable.Identifier.Type}_res to i8*)," +
-                $" {type} %{write.Evaluable.Identifier.Name})");
+                var llvm_type = Helper.GetType(type);
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([3 x i8]* @{type}_res to i8*)," +
+                $" {llvm_type} %{write.Evaluable.Identifier.Name})");
             }
-            
+        }
+
+        public void Visit(AdditiveOp additiveOp)
+        {
+            additiveOp.Left.Accept(this);
+            additiveOp.Right.Accept(this);
+
+            var resultType = additiveOp.Identifier.Type;
+            var op = Helper.GetAdditive(additiveOp.Additive, resultType);
+
+            var tmpLeft = additiveOp.Left.Identifier.Name;
+            var tmpRight = additiveOp.Right.Identifier.Name;
+
+            if (resultType == MiniTypes.Int)
+            {
+                EmitCode($"%{additiveOp.Identifier.Name} = {op} i32 %{tmpLeft}, %{tmpRight}");
+            }
+            else
+            {
+                if(additiveOp.Left.Identifier.Type == MiniTypes.Int)
+                {
+                    tmpLeft = EmitIntToDouble(tmpLeft);
+                }
+                else
+                {
+                    tmpRight = EmitIntToDouble(tmpRight);
+                }
+
+                EmitCode($"%{additiveOp.Identifier.Name} = {op} double %{tmpLeft}, %{tmpRight}");
+            }
+        }
+
+        public void Visit(MultiplicativeOp multiplicativeOp)
+        {
+            multiplicativeOp.Left.Accept(this);
+            multiplicativeOp.Right.Accept(this);
+
+            var resultType = multiplicativeOp.Identifier.Type;
+            var op = Helper.GetMultiplicative(multiplicativeOp.Multiplicative, resultType);
+
+            var tmpLeft = multiplicativeOp.Left.Identifier.Name;
+            var tmpRight = multiplicativeOp.Right.Identifier.Name;
+
+            if (resultType == MiniTypes.Int)
+            {
+                EmitCode($"%{multiplicativeOp.Identifier.Name} = {op} i32 %{tmpLeft}, %{tmpRight}");
+            }
+            else
+            {
+                if (multiplicativeOp.Left.Identifier.Type == MiniTypes.Int)
+                {
+                    tmpLeft = EmitIntToDouble(tmpLeft);
+                }
+                else
+                {
+                    tmpRight = EmitIntToDouble(tmpRight);
+                }
+
+                EmitCode($"%{multiplicativeOp.Identifier.Name} = {op} double %{tmpLeft}, %{tmpRight}");
+            }
+        }
+
+        public void Visit(BitwiseOp bitwiseOp)
+        {
+            bitwiseOp.Left.Accept(this);
+            bitwiseOp.Right.Accept(this);
+
+            var op = Helper.GetBitwise(bitwiseOp.Bitwise);
+
+            EmitCode($"%{bitwiseOp.Identifier.Name} = {op} i32 %{bitwiseOp.Left.Identifier.Name}, %{bitwiseOp.Right.Identifier.Name}");
+        }
+
+        public void Visit(UnaryOp unaryOp)
+        {
+            unaryOp.Evaluable.Accept(this);
+
+            var type = unaryOp.Evaluable.Identifier.Type;
+            var eval = unaryOp.Evaluable.Identifier.Name;
+            if(unaryOp.Unary == Unary.ConversionToInt)
+            {
+                if(type == MiniTypes.Int)
+                {
+                    // TODO: Check for negative numbers
+                    EmitCode($"%{unaryOp.Identifier.Name} = zext i1 %{eval} to i32");
+                }
+                else if(type == MiniTypes.Double)
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = fptosi double %{eval} to i32");
+                }
+                else
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = add i32 %{eval}, 0");
+                }
+            }
+            else if(unaryOp.Unary == Unary.ConversionToDouble)
+            {
+                if(type == MiniTypes.Int)
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = sitofp i32 %{eval} to double");
+                }
+                else
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = fadd double %{eval}, 0.0");
+                }
+            }
+            else if (unaryOp.Unary == Unary.LogicNegation)
+            {
+                EmitCode($"%{unaryOp.Identifier.Name} = i1 %{eval}, 1");
+            }
+            else if (unaryOp.Unary == Unary.BitNegation)
+            {
+                EmitCode($"%{unaryOp.Identifier.Name} = i32 %{eval}, -1");
+            }
         }
 
     }
@@ -653,6 +816,7 @@ namespace MiniLanguage
             Right = eval2;
         }
     }
+
     public class LogicAnd : LogicOp, IEvaluable
     {
         public Identifier Identifier { get; }
@@ -720,6 +884,179 @@ namespace MiniLanguage
             
         }
 
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public enum Additive
+    {
+        Add,
+        Sub
+    }
+    public class AdditiveOp : IEvaluable, IBinaryOperator
+    {
+        public Additive Additive { get; }
+        public IEvaluable Left { get; }
+
+        public IEvaluable Right { get; }
+
+        public Identifier Identifier { get; }
+
+        public AdditiveOp(IEvaluable left, IEvaluable right, Additive additive)
+        {
+            Additive = additive;
+            Left = left;
+            Right = right;
+
+            var leftType = left.Identifier.Type;
+            var rightType = right.Identifier.Type;
+
+            AbstractMiniType resultType;
+            if(leftType == MiniTypes.Int && rightType == MiniTypes.Int)
+            {
+                resultType = MiniTypes.Int;
+            }
+            else
+            {
+                resultType = MiniTypes.Double;
+            }
+
+            if(leftType == MiniTypes.Bool || rightType == MiniTypes.Bool)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+
+            Identifier = new Identifier(Helper.NewTmp(), resultType);
+        }
+
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public enum Multiplicative
+    {
+        Mul,
+        Div
+    }
+
+    public class MultiplicativeOp : IEvaluable, IBinaryOperator
+    {
+        public Multiplicative Multiplicative { get; }
+        public Identifier Identifier { get; }
+        public IEvaluable Left { get; }
+        public IEvaluable Right { get; }
+        public MultiplicativeOp(IEvaluable left, IEvaluable right, Multiplicative multiplicative)
+        {
+            Left = left;
+            Right = right;
+            Multiplicative = multiplicative;
+
+            var leftType = left.Identifier.Type;
+            var rightType = right.Identifier.Type;
+
+            AbstractMiniType resultType;
+            if (leftType == MiniTypes.Int && rightType == MiniTypes.Int)
+            {
+                resultType = MiniTypes.Int;
+            }
+            else
+            {
+                resultType = MiniTypes.Double;
+            }
+
+            if (leftType == MiniTypes.Bool || rightType == MiniTypes.Bool)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+
+            Identifier = new Identifier(Helper.NewTmp(), resultType);
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public enum Bitwise
+    {
+        And,
+        Or
+    }
+
+    public class BitwiseOp : IEvaluable, IBinaryOperator
+    {
+        public Bitwise Bitwise { get; }
+        public Identifier Identifier { get; }
+        public IEvaluable Left { get; }
+        public IEvaluable Right { get; }
+
+        public BitwiseOp(IEvaluable left, IEvaluable right, Bitwise bitwise)
+        {
+            Bitwise = bitwise;
+            Left = left;
+            Right = right;
+
+            var leftType = left.Identifier.Type;
+            var rightType = right.Identifier.Type;
+
+            if(leftType != MiniTypes.Int || rightType != MiniTypes.Int)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+
+            Identifier = new Identifier(Helper.NewTmp(), MiniTypes.Int);
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public enum Unary
+    {
+        Minus,
+        BitNegation,
+        LogicNegation,
+        ConversionToInt,
+        ConversionToDouble
+    }
+
+    public class UnaryOp : IEvaluable
+    {
+        public Unary Unary { get; }
+        public Identifier Identifier { get; }
+        public IEvaluable Evaluable { get; }
+        public UnaryOp(IEvaluable evaluable, Unary unary)
+        {
+            Evaluable = evaluable;
+            Unary = unary;
+
+            var type = evaluable.Identifier.Type;
+
+            AbstractMiniType resultType = MiniTypes.Int;
+            if (unary == Unary.Minus && (type == MiniTypes.Int || type == MiniTypes.Double))
+            {
+                resultType = type;
+            }
+            else if (unary == Unary.BitNegation && type == MiniTypes.Int)
+            {
+                resultType = MiniTypes.Int;
+            }
+            else if (unary == Unary.LogicNegation && type == MiniTypes.Bool)
+            {
+                resultType = MiniTypes.Bool;
+            }
+            else if (unary == Unary.ConversionToInt)
+            {
+                resultType = MiniTypes.Int;
+            }
+            else if (unary == Unary.ConversionToDouble && (type == MiniTypes.Int || type == MiniTypes.Double))
+            {
+                resultType = MiniTypes.Int;
+            }
+            else
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+
+            Identifier = new Identifier(Helper.NewTmp(), resultType);
+        }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 }
