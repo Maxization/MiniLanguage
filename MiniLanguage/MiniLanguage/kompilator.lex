@@ -19,6 +19,8 @@ String      ".*"
 "write"       { return (int)Tokens.Write; }
 "{"           { return (int)Tokens.OpenBrace; }
 "}"           { return (int)Tokens.CloseBrace; }
+"("           { return (int)Tokens.OpenBracket; }
+")"           { return (int)Tokens.CloseBracket; }
 ","           { return (int)Tokens.Comma; }
 ";"           { return (int)Tokens.Semicolon; }
 

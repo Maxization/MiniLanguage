@@ -14,7 +14,7 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write 
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket
 %token Equal NotEqual Greater GreaterEqual Less LessEqual
 %token Add Sub
 %token Mul Div
@@ -70,12 +70,6 @@ evaluable: Ident Assign evaluable { $$ = new Assignment(new Variable(Compiler.ST
          | logicOp                { $$ = $1; }
          ;
 
-value: IntNum     { $$ = $1; }
-     | DoubleNum  { $$ = $1; }
-     | Bool       { $$ = $1; }
-     | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
-     ;
-
 logicOp: logicOp And relationOp { $$ = new LogicAnd($1, $3); }
        | logicOp Or relationOp  { $$ = new LogicOr($1, $3); }
        | relationOp             { $$ = $1; }
@@ -90,27 +84,34 @@ relationOp: relationOp Equal additiveOp        { $$ = new RelationOp($1, $3, Rel
           | additiveOp                         { $$ = $1; }
           ;
 
-additiveOp: additiveOp Add multiplicativeOp { $$ = new AdditiveOp($1, $3, Additive.Add); }
-          | additiveOp Sub multiplicativeOp { $$ = new AdditiveOp($1, $3, Additive.Sub); }
+additiveOp: additiveOp Add multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Add); }
+          | additiveOp Sub multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Sub); }
           | multiplicativeOp                { $$ = $1; }
           ;
 
-multiplicativeOp: multiplicativeOp Mul bitwiseOp { $$ = new MultiplicativeOp($1, $3, Multiplicative.Mul); }
-                | multiplicativeOp Div bitwiseOp { $$ = new MultiplicativeOp($1, $3, Multiplicative.Div); }
+multiplicativeOp: multiplicativeOp Mul bitwiseOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Mul); }
+                | multiplicativeOp Div bitwiseOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Div); }
                 | bitwiseOp                      { $$ = $1; }
                 ;
 
-bitwiseOp: bitwiseOp BitAnd unarOp { $$ = new BitwiseOp($1, $3, Bitwise.And); }
-         | bitwiseOp BitOr unarOp  { $$ = new BitwiseOp($1, $3, Bitwise.Or); }
-         | unarOp                  { $$ = $1; }
+bitwiseOp: bitwiseOp BitAnd unaryOp { $$ = new BitwiseOp($1, $3, Bitwise.And); }
+         | bitwiseOp BitOr unaryOp  { $$ = new BitwiseOp($1, $3, Bitwise.Or); }
+         | unaryOp                  { $$ = $1; }
          ;
 
-unarOp: Minus unarOp          {}
-      | BitNegation unaryOp   {}
-      | LogicNegation unaryOp {}
-      | value                 {}
-      ;
+unaryOp: Minus unaryOp                         { $$ = new UnaryOp($2, Unary.Minus); }
+       | BitNegation unaryOp                   { $$ = new UnaryOp($2, Unary.BitNegation); }
+       | LogicNegation unaryOp                 { $$ = new UnaryOp($2, Unary.LogicNegation); }
+       | OpenBracket Type CloseBracket unaryOp { $$ = new UnaryOp($4, $2); }
+       | OpenBracket evaluable CloseBracket    { $$ = $2; }
+       | value                                 { $$ = $1; }
+       ;
 
+value: IntNum     { $$ = $1; }
+     | DoubleNum  { $$ = $1; }
+     | Bool       { $$ = $1; }
+     | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
+     ;
 
 %%
 
