@@ -17,6 +17,8 @@ String      ".*"
 "double"      { yylval.type=MiniTypes.Double; return (int)Tokens.Type; }
 "bool"        { yylval.type=MiniTypes.Bool; return (int)Tokens.Type; }
 "write"       { return (int)Tokens.Write; }
+"if"          { return (int)Tokens.If; }
+"else"        { return (int)Tokens.Else; }
 "{"           { return (int)Tokens.OpenBrace; }
 "}"           { return (int)Tokens.CloseBrace; }
 "("           { return (int)Tokens.OpenBracket; }

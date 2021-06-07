@@ -294,6 +294,7 @@ namespace MiniLanguage
         void Visit(MathhematicalOp mathhematicalOp);
         void Visit(BitwiseOp bitwiseOp);
         void Visit(UnaryOp unaryOp);
+        void Visit(IfStatement ifStatement);
     }
 
     public class CodeGenerator : IVisitor
@@ -398,14 +399,11 @@ namespace MiniLanguage
             logicAnd.Left.Accept(this);
 
             var tmp = Helper.NewTmp();
-            var tmp2 = Helper.NewTmp();
             var label_true = Helper.NewLabel();
             var label_false = Helper.NewLabel();
             var label_end = Helper.NewLabel();
 
-            EmitCode($"%{tmp} = icmp eq i1 %{logicAnd.Left.Identifier.Name}, 1");
-
-            EmitCode($"br i1 %{tmp}, label %{label_true}, label %{label_false}");
+            EmitCode($"br i1 %{logicAnd.Left.Identifier.Name}, label %{label_true}, label %{label_false}");
 
             EmitCode($"{label_false}:");
             EmitCode($"store i1 0, i1* %bool");
@@ -413,8 +411,8 @@ namespace MiniLanguage
 
             EmitCode($"{label_true}:");
             logicAnd.Right.Accept(this);
-            EmitCode($"%{tmp2} = and i1 %{logicAnd.Left.Identifier.Name}, %{logicAnd.Right.Identifier.Name}");
-            EmitCode($"store i1 %{tmp2}, i1* %bool");
+            EmitCode($"%{tmp} = and i1 %{logicAnd.Left.Identifier.Name}, %{logicAnd.Right.Identifier.Name}");
+            EmitCode($"store i1 %{tmp}, i1* %bool");
             EmitCode($"br label %{label_end}");
 
             EmitCode($"{label_end}:");
@@ -426,14 +424,11 @@ namespace MiniLanguage
             logicOr.Left.Accept(this);
 
             var tmp = Helper.NewTmp();
-            var tmp2 = Helper.NewTmp();
             var label_true = Helper.NewLabel();
             var label_false = Helper.NewLabel();
             var label_end = Helper.NewLabel();
 
-            EmitCode($"%{tmp} = icmp eq i1 %{logicOr.Left.Identifier.Name}, 1");
-
-            EmitCode($"br i1 %{tmp}, label %{label_true}, label %{label_false}");
+            EmitCode($"br i1 %{logicOr.Left.Identifier.Name}, label %{label_true}, label %{label_false}");
 
             EmitCode($"{label_true}:");
             EmitCode($"store i1 1, i1* %bool");
@@ -441,8 +436,8 @@ namespace MiniLanguage
 
             EmitCode($"{label_false}:");
             logicOr.Right.Accept(this);
-            EmitCode($"%{tmp2} = or i1 %{logicOr.Left.Identifier.Name}, %{logicOr.Right.Identifier.Name}");
-            EmitCode($"store i1 %{tmp2}, i1* %bool");
+            EmitCode($"%{tmp} = or i1 %{logicOr.Left.Identifier.Name}, %{logicOr.Right.Identifier.Name}");
+            EmitCode($"store i1 %{tmp}, i1* %bool");
             EmitCode($"br label %{label_end}");
 
             EmitCode($"{label_end}:");
@@ -597,6 +592,27 @@ namespace MiniLanguage
             }
         }
 
+        public void Visit(IfStatement ifStatement)
+        {
+            ifStatement.Test.Accept(this);
+
+            var label_true = Helper.NewLabel();
+            var label_false = Helper.NewLabel();
+            var label_end = Helper.NewLabel();
+
+            EmitCode($"br i1 %{ifStatement.Test.Identifier.Name}, label %{label_true}, label ${label_false}");
+            EmitCode($"{label_true}:");
+            ifStatement.Statement.Accept(this);
+            EmitCode($"br %{label_end}");
+            EmitCode($"{label_false}:");
+            if(ifStatement.ElseStatement != null)
+            {
+                ifStatement.ElseStatement.Accept(this);
+            }
+            EmitCode($"br %{label_end}");
+            EmitCode($"{label_end}:");
+        }
+
     }
 
     #endregion
@@ -728,6 +744,28 @@ namespace MiniLanguage
     {
         public IEvaluable Evaluable { get; }
         public Write(IEvaluable eval) => Evaluable = eval;
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class IfStatement : INode
+    {
+        public IEvaluable Test { get; }
+        public INode Statement { get; }
+        public INode ElseStatement { get; }
+
+        public IfStatement(IEvaluable test, INode statement, INode elseStatement = null)
+        {
+            Test = test;
+            Statement = statement;
+            ElseStatement = elseStatement;
+
+            if(test.Identifier.Type != MiniTypes.Bool)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+        }
+
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
