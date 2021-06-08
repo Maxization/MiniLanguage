@@ -14,7 +14,7 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket If Else While Hex
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket If Else While Hex Read
 %token Equal NotEqual Greater GreaterEqual Less LessEqual
 %token Plus Minus Mul Div
 %token BitAnd BitOr
@@ -24,10 +24,10 @@
 %token <str> Ident String
 %token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock block statement write if return while
+%type <node> mainBlock block statement write read if return while
 %type <nodeList> declaration declarations statements
 %type <strList> idents
-%type <eval> value evaluable logicOp relationOp additiveOp multiplicativeOp bitwiseOp unaryOp
+%type <eval> value evaluable logicOp relationOp additiveOp multiplicativeOp bitwiseOp unaryOp variable
 
 %%
 
@@ -57,6 +57,7 @@ statements: statements statement { $1.Add($2); $$ = $1; }
 
 statement: evaluable Semicolon { $$ = $1; Compiler.linenum++; }
          | write Semicolon     { $$ = $1; }
+         | read Semicolon      { $$ = $1; }
          | return Semicolon    { $$ = $1; }
          | block               { $$ = $1; }
          | if                  { $$ = $1; }
@@ -79,6 +80,10 @@ write: Write evaluable                          { $$ = new Write($2); }
      | Write evaluable Comma Hex                { $$ = new WriteHex($2); }
      | Write String                             { $$ = new WriteString($2); }
      ;
+
+read: Read variable           { $$ = new Read($2 as Variable); }
+    | Read variable Comma Hex { $$ = new ReadHex($2 as Variable); }
+    ;
 
 block: OpenBrace statements CloseBrace { $$ = new Block($2); }
      ;
@@ -124,10 +129,13 @@ unaryOp: Minus unaryOp                         { $$ = new UnaryOp($2, Unary.Minu
        | value                                 { $$ = $1; }
        ;
 
+variable: Ident { $$ = new Variable(Compiler.STG.FindIdent($1)); }
+        ;
+
 value: IntNum     { $$ = $1; }
      | DoubleNum  { $$ = $1; }
      | Bool       { $$ = $1; }
-     | Ident      { $$ = new Variable(Compiler.STG.FindIdent($1)); }
+     | variable   { $$ = $1; }
      ;
 
 %%

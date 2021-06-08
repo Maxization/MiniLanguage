@@ -17,6 +17,7 @@ String      \"(\\.|[^"\\\n])*\"
 "double"      { yylval.type=MiniTypes.Double; return (int)Tokens.Type; }
 "bool"        { yylval.type=MiniTypes.Bool; return (int)Tokens.Type; }
 "write"       { return (int)Tokens.Write; }
+"read"        { return (int)Tokens.Read; }
 "if"          { return (int)Tokens.If; }
 "else"        { return (int)Tokens.Else; }
 "return"      { return (int)Tokens.Return; }

@@ -346,6 +346,8 @@ namespace MiniLanguage
         void Visit(WhileStatement whileStatement);
         void Visit(WriteHex writeHex);
         void Visit(WriteString writeString);
+        void Visit(Read read);
+        void Visit(ReadHex readHex);
     }
 
     public class CodeGenerator : IVisitor
@@ -379,7 +381,11 @@ namespace MiniLanguage
             EmitCode("@double_res = constant [4 x i8] c\"%lf\\00\"");
             EmitCode("@true_res = constant [5 x i8] c\"True\\00\"");
             EmitCode("@false_res = constant [6 x i8] c\"False\\00\"");
+            EmitCode("@int_read = constant [ 3 x i8] c\"%d\\00\"");
+            EmitCode("@hex_read = constant [3 x i8] c\"%X\\00\"");
+            EmitCode("@double_read = constant [ 4 x i8] c\"%lf\\00\"");
             EmitCode("declare i32 @printf(i8*, ...)");
+            EmitCode("declare i32 @scanf(i8*, ...)");
             EmitCode("define i32 @main()");
             EmitCode("{");
             EmitCode("%int = alloca i32");
@@ -589,6 +595,7 @@ namespace MiniLanguage
             EmitCode($"%{tmp2} = bitcast [{len} x i8]* %{tmp} to i8*");
             EmitCode($"call i32 (i8*, ...) @printf(i8* %{tmp2})");
         }
+
         public void Visit(MathhematicalOp mathhematicalOp)
         {
             mathhematicalOp.Left.Accept(this);
@@ -724,6 +731,23 @@ namespace MiniLanguage
             whileStatement.Statement.Accept(this);
             EmitCode($"br label %{start_label}");
             EmitCode($"{false_label}:");
+        }
+
+        public void Visit(Read read)
+        {
+            if (read.Variable.Type == MiniTypes.Int)
+            {
+                EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @int_read to i8*), i32* %{read.Variable.Name})");
+            }
+            else
+            {
+                EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([4 x i8]* @double_read to i8*), double* %{read.Variable.Name})");
+            }
+        }
+
+        public void Visit(ReadHex readHex)
+        {
+            EmitCode($"call i32 (i8*, ...) @scanf(i8* bitcast ([3 x i8]* @hex_read to i8*), i32* %{readHex.Variable.Name})");
         }
     }
 
@@ -882,7 +906,37 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
+    public class Read : INode
+    {
+        public Variable Variable { get; }
+        public Read(Variable variable)
+        {
+            Variable = variable;
 
+            if(Variable.Type == MiniTypes.Bool)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class ReadHex : INode
+    {
+        public Variable Variable { get; }
+        public ReadHex(Variable variable)
+        {
+            Variable = variable;
+
+            if(Variable.Type != MiniTypes.Int)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
 
     public class IfStatement : INode
     {
