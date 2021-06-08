@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using GardensPoint;
+using System.Text;
 
 namespace MiniLanguage
 {
@@ -282,6 +283,45 @@ namespace MiniLanguage
                     return "or";
             }
         }
+
+        public static (string str, int len) ParseString(string value)
+        {
+            var tmp = value.Substring(1, value.Length - 2);
+
+            var result = new StringBuilder();
+            var counter = 0;
+            
+            for (int i = 0; i < tmp.Length; i++)
+            {
+                if (tmp[i] == '\\')
+                {
+                    switch (tmp[i + 1])
+                    {
+                        case 'n':
+                            result.Append("\\0A");
+                            break;
+                        case '\"':
+                            result.Append("\\22");
+                            break;
+                        case '\\':
+                            result.Append("\\5C");
+                            break;
+                        default:
+                            result.Append(tmp[i + 1]);
+                            break;
+                    }
+
+                    counter++;
+                    i++;
+                }
+                else
+                {
+                    result.Append(tmp[i]);
+                }
+            }
+
+            return (result.ToString(), tmp.Length - counter);
+        }
     }
 
     #region visitor
@@ -303,6 +343,9 @@ namespace MiniLanguage
         void Visit(UnaryOp unaryOp);
         void Visit(IfStatement ifStatement);
         void Visit(ReturnStatement returnStatement);
+        void Visit(WhileStatement whileStatement);
+        void Visit(WriteHex writeHex);
+        void Visit(WriteString writeString);
     }
 
     public class CodeGenerator : IVisitor
@@ -332,9 +375,10 @@ namespace MiniLanguage
         {
             EmitCode("; prolog");
             EmitCode("@int_res = constant [3 x i8] c\"%d\\00\"");
-            EmitCode("@double_res = constant [3 x i8] c\"%f\\00\"");
-            EmitCode("@true_res = constant [5 x i8] c\"true\\00\"");
-            EmitCode("@false_res = constant [6 x i8] c\"false\\00\"");
+            EmitCode("@hex_res = constant [5 x i8] c\"0X%X\\00\"");
+            EmitCode("@double_res = constant [4 x i8] c\"%lf\\00\"");
+            EmitCode("@true_res = constant [5 x i8] c\"True\\00\"");
+            EmitCode("@false_res = constant [6 x i8] c\"False\\00\"");
             EmitCode("declare i32 @printf(i8*, ...)");
             EmitCode("define i32 @main()");
             EmitCode("{");
@@ -516,14 +560,35 @@ namespace MiniLanguage
                 EmitCode($"{label_end}:");
 
             }
+            else if( type == MiniTypes.Double)
+            {
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([4 x i8]* @double_res to i8*)," +
+                $" double %{write.Evaluable.Identifier.Name})");
+            }
             else
             {
-                var llvm_type = Helper.GetType(type);
-                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([3 x i8]* @{type}_res to i8*)," +
-                $" {llvm_type} %{write.Evaluable.Identifier.Name})");
+                EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([3 x i8]* @int_res to i8*)," +
+                $" i32 %{write.Evaluable.Identifier.Name})");
             }
         }
 
+        public void Visit(WriteHex writeHex)
+        {
+            writeHex.Evaluable.Accept(this);
+
+            EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([5 x i8]* @hex_res to i8*), i32 %{writeHex.Evaluable.Identifier.Name})");
+        }
+
+        public void Visit(WriteString writeString)
+        {
+            int len = writeString.Length + 1;
+            var tmp = Helper.NewTmp();
+            var tmp2 = Helper.NewTmp();
+            EmitCode($"%{tmp} = alloca [{len} x i8]");
+            EmitCode($"store [{len} x i8] c\"{writeString.Value}\\00\", [{len} x i8]* %{tmp}");
+            EmitCode($"%{tmp2} = bitcast [{len} x i8]* %{tmp} to i8*");
+            EmitCode($"call i32 (i8*, ...) @printf(i8* %{tmp2})");
+        }
         public void Visit(MathhematicalOp mathhematicalOp)
         {
             mathhematicalOp.Left.Accept(this);
@@ -645,6 +710,21 @@ namespace MiniLanguage
             EmitCode($"ret i32 0");
         }
 
+        public void Visit(WhileStatement whileStatement)
+        {
+            var start_label = Helper.NewLabel();
+            var true_label = Helper.NewLabel();
+            var false_label = Helper.NewLabel();
+
+            EmitCode($"br label %{start_label}");
+            EmitCode($"{start_label}:");
+            whileStatement.Test.Accept(this);
+            EmitCode($"br i1 %{whileStatement.Test.Identifier.Name}, label %{true_label}, label %{false_label}");
+            EmitCode($"{true_label}:");
+            whileStatement.Statement.Accept(this);
+            EmitCode($"br label %{start_label}");
+            EmitCode($"{false_label}:");
+        }
     }
 
     #endregion
@@ -779,6 +859,31 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
+    public class WriteHex : INode
+    {
+        public IEvaluable Evaluable { get; }
+        public WriteHex(IEvaluable evaluable)
+        {
+            Evaluable = evaluable;
+            if(evaluable.Identifier.Type != MiniTypes.Int)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+        }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class WriteString : INode
+    {
+        public string Value { get; }
+        public int Length { get; }
+        public WriteString(string value) => (Value, Length) = Helper.ParseString(value);
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+
+
     public class IfStatement : INode
     {
         public IEvaluable Test { get; }
@@ -798,6 +903,30 @@ namespace MiniLanguage
             }
         }
 
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class ReturnStatement : INode
+    {
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class WhileStatement : INode
+    {
+        public IEvaluable Test { get; }
+        public INode Statement { get; }
+
+        public WhileStatement(IEvaluable test, INode statement)
+        {
+            Test = test;
+            Statement = statement;
+
+            if(test.Identifier.Type != MiniTypes.Bool)
+            {
+                Compiler.errors++;
+                Compiler.PrintError("Invalid types");
+            }
+        }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
@@ -825,6 +954,8 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
+
+    #region operators
     public interface IBinaryOperator
     {
         IEvaluable Left { get; }
@@ -1075,9 +1206,6 @@ namespace MiniLanguage
         }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
+    #endregion
 
-    public class ReturnStatement : INode
-    {
-        public void Accept(IVisitor visitor) => visitor.Visit(this);
-    }
 }

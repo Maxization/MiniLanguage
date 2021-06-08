@@ -14,17 +14,17 @@
     public IEvaluable eval;
 }
 
-%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket If Else
+%token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket If Else While Hex
 %token Equal NotEqual Greater GreaterEqual Less LessEqual
 %token Plus Minus Mul Div
 %token BitAnd BitOr
 %token BitNegation LogicNegation
 %token Return
 %token <type> Type
-%token <str> Ident
+%token <str> Ident String
 %token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock block statement write if return
+%type <node> mainBlock block statement write if return while
 %type <nodeList> declaration declarations statements
 %type <strList> idents
 %type <eval> value evaluable logicOp relationOp additiveOp multiplicativeOp bitwiseOp unaryOp
@@ -60,6 +60,7 @@ statement: evaluable Semicolon { $$ = $1; Compiler.linenum++; }
          | return Semicolon    { $$ = $1; }
          | block               { $$ = $1; }
          | if                  { $$ = $1; }
+         | while               { $$ = $1; }
          | evaluable error     { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
          | write error         { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
          ;
@@ -71,7 +72,12 @@ if: If OpenBracket evaluable CloseBracket statement                { $$ = new If
   | If OpenBracket evaluable CloseBracket statement Else statement { $$ = new IfStatement($3, $5, $7); }
   ;
 
-write: Write evaluable {$$ = new Write($2); }
+while: While OpenBracket evaluable CloseBracket statement { $$ = new WhileStatement($3, $5); }
+     ;
+
+write: Write evaluable                          { $$ = new Write($2); }
+     | Write evaluable Comma Hex                { $$ = new WriteHex($2); }
+     | Write String                             { $$ = new WriteString($2); }
      ;
 
 block: OpenBrace statements CloseBrace { $$ = new Block($2); }

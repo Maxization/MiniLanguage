@@ -1,0 +1,8 @@
+program {
+    bool b;
+	b = false;
+	while (b)
+	{
+		write 1;
+	}
+}

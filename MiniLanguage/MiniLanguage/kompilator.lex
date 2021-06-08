@@ -8,7 +8,7 @@ Bool        true|false
 Int         0|[1-9][0-9]*
 Hex         (0x|0X)[0-9a-fA-F]+
 Comment     \/\/.*\n
-String      ".*"
+String      \"(\\.|[^"\\\n])*\"
 
 %%
 
@@ -20,6 +20,8 @@ String      ".*"
 "if"          { return (int)Tokens.If; }
 "else"        { return (int)Tokens.Else; }
 "return"      { return (int)Tokens.Return; }
+"while"       { return (int)Tokens.While; }
+"hex"         { return (int)Tokens.Hex; }
 "{"           { return (int)Tokens.OpenBrace; }
 "}"           { return (int)Tokens.CloseBrace; }
 "("           { return (int)Tokens.OpenBracket; }
@@ -51,6 +53,7 @@ String      ".*"
 
 "="           { return (int)Tokens.Assign; }
 
+{String}      { yylval.str=yytext; return (int)Tokens.String; }
 {Bool}        { yylval.eval=new Const(yytext, MiniTypes.Bool); return (int)Tokens.Bool; }
 {Int}         { yylval.eval=new Const(yytext, MiniTypes.Int); return (int)Tokens.IntNum; }
 {Double}      { yylval.eval=new Const(yytext, MiniTypes.Double); return (int)Tokens.DoubleNum; }
