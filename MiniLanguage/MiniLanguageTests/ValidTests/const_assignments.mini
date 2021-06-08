@@ -1,0 +1,18 @@
+program {
+    int x;
+    double d;
+    bool b;
+    
+    x = 1;
+    x = 0;
+    x = 123432;
+    
+    d = 1;
+    d = 0;
+    d = 0.0;
+    d = 1.0;
+    d = 3.14159265;
+    
+    b = true;
+    b = false;
+}

@@ -1,0 +1,18 @@
+program {
+    int nop;
+    int stloc;
+    int ldloc;
+    int callvirt;
+    int void;
+    int mscorlib;
+    int System;
+    int string;
+    int leave;
+    int add;
+    int or;
+    int div;
+    
+    callvirt = 5;
+    or + div / string * System;
+    nop;
+}

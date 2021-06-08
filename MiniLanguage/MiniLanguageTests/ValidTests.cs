@@ -18,6 +18,10 @@ namespace MiniLanguageTests
             int result = Compiler.Main(args);
 
             Assert.Equal(noErrors, result);
+
+            var llPath = Compiler.OutputFile;
+
+            Utility.Run(llPath);
         }
 
         public static IEnumerable<object[]> TesstNames => Utility.GetValidFiles();

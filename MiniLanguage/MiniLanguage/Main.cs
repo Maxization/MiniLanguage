@@ -13,6 +13,7 @@ namespace MiniLanguage
         private static StreamWriter sw;
         public static Program Program { get; set; }
         public static CodeGenerator codeGenerator { get; set; }
+        public static string OutputFile { get; set; }
         public static SyntaxTreeGenerator STG => new SyntaxTreeGenerator();
         public static List<string> source;
 
@@ -78,7 +79,8 @@ namespace MiniLanguage
             source.Close();
             if (errors == 0)
             {
-                sw = new StreamWriter(file + ".ll");
+                OutputFile = file + ".ll";
+                sw = new StreamWriter(OutputFile);
                 codeGenerator = new CodeGenerator(sw);
                 codeGenerator.GenCode(Program);
                 sw.Close();
