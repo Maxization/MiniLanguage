@@ -16,9 +16,10 @@
 
 %token Program OpenBrace CloseBrace Semicolon Comma Assign And Or Write OpenBracket CloseBracket If Else
 %token Equal NotEqual Greater GreaterEqual Less LessEqual
-%token Add Sub Mul Div
+%token Plus Minus Mul Div
 %token BitAnd BitOr
-%token Minus BitNegation LogicNegation
+%token BitNegation LogicNegation
+%token Return
 %token <type> Type
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
@@ -90,8 +91,8 @@ relationOp: relationOp Equal additiveOp        { $$ = new RelationOp($1, $3, Rel
           | additiveOp                         { $$ = $1; }
           ;
 
-additiveOp: additiveOp Add multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Add); }
-          | additiveOp Sub multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Sub); }
+additiveOp: additiveOp Plus multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Add); }
+          | additiveOp Minus multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Sub); }
           | multiplicativeOp                { $$ = $1; }
           ;
 

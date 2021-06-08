@@ -19,6 +19,7 @@ String      ".*"
 "write"       { return (int)Tokens.Write; }
 "if"          { return (int)Tokens.If; }
 "else"        { return (int)Tokens.Else; }
+"return"      { return (int)Tokens.Return; }
 "{"           { return (int)Tokens.OpenBrace; }
 "}"           { return (int)Tokens.CloseBrace; }
 "("           { return (int)Tokens.OpenBracket; }
@@ -29,8 +30,8 @@ String      ".*"
 "~"           { return (int)Tokens.BitNegation; }
 "!"           { return (int)Tokens.LogicNegation; }
 
-"+"           { return (int)Tokens.Add; }
-"-"           { return (int)Tokens.Sub; }
+"+"           { return (int)Tokens.Plus; }
+"-"           { return (int)Tokens.Minus; }
 
 "/"           { return (int)Tokens.Div; }
 "*"           { return (int)Tokens.Mul; }

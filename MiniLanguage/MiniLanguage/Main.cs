@@ -44,7 +44,9 @@ namespace MiniLanguage
             FileStream source;
             Console.WriteLine("\nLLVM Code Generator for Mini Language");
             if (args.Length >= 1)
+            {
                 file = args[0];
+            }
             else
             {
                 Console.Write("\nsource file:  ");
@@ -87,7 +89,10 @@ namespace MiniLanguage
                 Console.WriteLine("Compilation successful\n");
             }
             else
+            {
                 Console.WriteLine($"\n  {errors} errors detected\n");
+            }
+
             return errors == 0 ? 0 : 2;
         }
 
@@ -384,9 +389,17 @@ namespace MiniLanguage
         {
             assignment.Right.Accept(this);
 
-            var type = Helper.GetType(assignment.Right.Identifier.Type);
+            var tmp = assignment.Right.Identifier.Name;
+            var type = Helper.GetType(assignment.Left.Identifier.Type);
+            var leftType = assignment.Left.Identifier.Type;
+            var rightType = assignment.Right.Identifier.Type;
 
-            EmitCode($"store {type} %{assignment.Right.Identifier.Name}, {type}* %{assignment.Left.Name}");
+            if(leftType == MiniTypes.Double && rightType == MiniTypes.Int)
+            {
+                tmp = EmitIntToDouble(assignment.Right.Identifier.Name);
+            }
+
+            EmitCode($"store {type} %{tmp}, {type}* %{assignment.Left.Name}");
             assignment.Left.Accept(this);
         }
 
@@ -559,7 +572,7 @@ namespace MiniLanguage
             var eval = unaryOp.Evaluable.Identifier.Name;
             if(unaryOp.Unary == Unary.ConversionToInt)
             {
-                if(type == MiniTypes.Int)
+                if(type == MiniTypes.Bool)
                 {
                     // TODO: Check for negative numbers
                     EmitCode($"%{unaryOp.Identifier.Name} = zext i1 %{eval} to i32");
@@ -586,11 +599,23 @@ namespace MiniLanguage
             }
             else if (unaryOp.Unary == Unary.LogicNegation)
             {
-                EmitCode($"%{unaryOp.Identifier.Name} = i1 %{eval}, 1");
+                EmitCode($"%{unaryOp.Identifier.Name} = xor i1 %{eval}, 1");
             }
             else if (unaryOp.Unary == Unary.BitNegation)
             {
-                EmitCode($"%{unaryOp.Identifier.Name} = i32 %{eval}, -1");
+                EmitCode($"%{unaryOp.Identifier.Name} = xor i32 %{eval}, -1");
+            }
+            else if (unaryOp.Unary == Unary.Minus)
+            {
+                if (type == MiniTypes.Double)
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = fsub double 0.0, %{eval}");
+                }
+                else
+                {
+                    EmitCode($"%{unaryOp.Identifier.Name} = sub i32 0, %{eval}");
+                }
+                
             }
         }
 
@@ -602,16 +627,16 @@ namespace MiniLanguage
             var label_false = Helper.NewLabel();
             var label_end = Helper.NewLabel();
 
-            EmitCode($"br i1 %{ifStatement.Test.Identifier.Name}, label %{label_true}, label ${label_false}");
+            EmitCode($"br i1 %{ifStatement.Test.Identifier.Name}, label %{label_true}, label %{label_false}");
             EmitCode($"{label_true}:");
             ifStatement.Statement.Accept(this);
-            EmitCode($"br %{label_end}");
+            EmitCode($"br label %{label_end}");
             EmitCode($"{label_false}:");
             if(ifStatement.ElseStatement != null)
             {
                 ifStatement.ElseStatement.Accept(this);
             }
-            EmitCode($"br %{label_end}");
+            EmitCode($"br label %{label_end}");
             EmitCode($"{label_end}:");
         }
 
@@ -1033,7 +1058,7 @@ namespace MiniLanguage
             }
             else if (Unary == Unary.ConversionToDouble && (type == MiniTypes.Int || type == MiniTypes.Double))
             {
-                resultType = MiniTypes.Int;
+                resultType = MiniTypes.Double;
             }
             else
             {
