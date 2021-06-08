@@ -24,7 +24,7 @@
 %token <str> Ident
 %token <eval> IntNum DoubleNum Bool
 
-%type <node> mainBlock block statement write if
+%type <node> mainBlock block statement write if return
 %type <nodeList> declaration declarations statements
 %type <strList> idents
 %type <eval> value evaluable logicOp relationOp additiveOp multiplicativeOp bitwiseOp unaryOp
@@ -57,11 +57,15 @@ statements: statements statement { $1.Add($2); $$ = $1; }
 
 statement: evaluable Semicolon { $$ = $1; Compiler.linenum++; }
          | write Semicolon     { $$ = $1; }
+         | return Semicolon    { $$ = $1; }
          | block               { $$ = $1; }
          | if                  { $$ = $1; }
          | evaluable error     { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
          | write error         { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
          ;
+
+return: Return { $$ = new ReturnStatement(); }
+      ;
 
 if: If OpenBracket evaluable CloseBracket statement                { $$ = new IfStatement($3, $5); }
   | If OpenBracket evaluable CloseBracket statement Else statement { $$ = new IfStatement($3, $5, $7); }

@@ -1,0 +1,7 @@
+program {
+	int a,b,c,d;
+	a = b = 5;
+	c = a+b;
+	return;
+	d = c;
+}

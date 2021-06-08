@@ -302,6 +302,7 @@ namespace MiniLanguage
         void Visit(BitwiseOp bitwiseOp);
         void Visit(UnaryOp unaryOp);
         void Visit(IfStatement ifStatement);
+        void Visit(ReturnStatement returnStatement);
     }
 
     public class CodeGenerator : IVisitor
@@ -574,7 +575,6 @@ namespace MiniLanguage
             {
                 if(type == MiniTypes.Bool)
                 {
-                    // TODO: Check for negative numbers
                     EmitCode($"%{unaryOp.Identifier.Name} = zext i1 %{eval} to i32");
                 }
                 else if(type == MiniTypes.Double)
@@ -638,6 +638,11 @@ namespace MiniLanguage
             }
             EmitCode($"br label %{label_end}");
             EmitCode($"{label_end}:");
+        }
+
+        public void Visit(ReturnStatement returnStatement)
+        {
+            EmitCode($"ret i32 0");
         }
 
     }
@@ -1068,6 +1073,11 @@ namespace MiniLanguage
 
             Identifier = new Identifier(Helper.NewTmp(), resultType);
         }
+        public void Accept(IVisitor visitor) => visitor.Visit(this);
+    }
+
+    public class ReturnStatement : INode
+    {
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 }
