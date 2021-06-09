@@ -33,14 +33,14 @@
 
 start: Program mainBlock { Compiler.Program = new Program($2 as MainBlock); }
      | Program error EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
-     | EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
+     | EOF               { Compiler.errors++; Compiler.PrintError(); YYABORT; }
      ;
 
 mainBlock: OpenBrace declarations statements CloseBrace { $$ = new MainBlock($2, $3); }
-         | OpenBrace declarations error EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
+         | OpenBrace declarations error EOF             { Compiler.errors++; Compiler.PrintError(); YYABORT; }
          ;
 
-declarations: declarations declaration Semicolon { $1.AddRange($2); $$ = $1; Compiler.linenum++; }
+declarations: declarations declaration Semicolon { $1.AddRange($2); $$ = $1; }
             |                                    { $$ = new List<INode>(); }
             ;
 
@@ -55,7 +55,7 @@ statements: statements statement { $1.Add($2); $$ = $1; }
           |                      { $$ = new List<INode>(); }
           ;
 
-statement: evaluable Semicolon { $$ = $1; Compiler.linenum++; }
+statement: evaluable Semicolon { $$ = $1; }
          | write Semicolon     { $$ = $1; }
          | read Semicolon      { $$ = $1; }
          | return Semicolon    { $$ = $1; }
@@ -76,9 +76,9 @@ if: If OpenBracket evaluable CloseBracket statement                { $$ = new If
 while: While OpenBracket evaluable CloseBracket statement { $$ = new WhileStatement($3, $5); }
      ;
 
-write: Write evaluable                          { $$ = new Write($2); }
-     | Write evaluable Comma Hex                { $$ = new WriteHex($2); }
-     | Write String                             { $$ = new WriteString($2); }
+write: Write evaluable           { $$ = new Write($2); }
+     | Write evaluable Comma Hex { $$ = new WriteHex($2); }
+     | Write String              { $$ = new WriteString($2); }
      ;
 
 read: Read variable           { $$ = new Read($2 as Variable); }
@@ -106,9 +106,9 @@ relationOp: relationOp Equal additiveOp        { $$ = new RelationOp($1, $3, Rel
           | additiveOp                         { $$ = $1; }
           ;
 
-additiveOp: additiveOp Plus multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Add); }
+additiveOp: additiveOp Plus multiplicativeOp  { $$ = new MathhematicalOp($1, $3, Mathhematical.Add); }
           | additiveOp Minus multiplicativeOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Sub); }
-          | multiplicativeOp                { $$ = $1; }
+          | multiplicativeOp                  { $$ = $1; }
           ;
 
 multiplicativeOp: multiplicativeOp Mul bitwiseOp { $$ = new MathhematicalOp($1, $3, Mathhematical.Mul); }

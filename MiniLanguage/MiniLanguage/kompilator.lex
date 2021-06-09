@@ -65,6 +65,6 @@ String      \"(\\.|[^"\\\n])*\"
 "\r"          { }
 " "           { }
 "\t"          { }
-"\n"          { }
+"\n"          { Compiler.linenum++; }
 {Comment}     { }
 .             { return (int)Tokens.error; }
