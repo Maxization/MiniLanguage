@@ -13,9 +13,9 @@ namespace MiniLanguageTests
     {
         public static string ValidTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\ValidTests"); }
         public static string OutputTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\OutputTests"); }
-        public static string GetFile(string name)
+        public static string GetFile(string path, string name)
         {
-            return Path.Combine(ValidTestsPath, name);
+            return Path.Combine(path, name);
         }
 
         public static IEnumerable<object[]> GetFiles(string sourcePath)
@@ -43,7 +43,7 @@ namespace MiniLanguageTests
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = false
+                    CreateNoWindow = true
                 }
             };
 
@@ -71,8 +71,8 @@ namespace MiniLanguageTests
                     ("monte_carlo.mini", "PI between 3 and 3.3: True"),
                     ("multi_assignment.mini", "6 6 6.000000"),
                     ("return.mini", "return"),
-                    ("strings.mini", "\\\"\n?"),
-                    ("unary.mini", "-1 5 False True -2 1 3.560000 8.000000 0.000000 1.000000 5 1 3 1 0"),
+                    ("strings.mini", "\\\"\r\n?"),
+                    ("unary.mini", "-1 5 False True -2 1 3.560000 8.000000 5 1 3 1 0"),
                     ("while.mini", "40320 1 2 3 4 5 9 -2 0")
                 };
     }

@@ -8,8 +8,6 @@ program {
     
     write (double) 3.56; write " ";
     write (double) 8; write " ";
-    write (double) false; write " ";
-    write (double) true; write " ";
     
     write (int) 5; write " ";
     write (int) 1.4; write " ";

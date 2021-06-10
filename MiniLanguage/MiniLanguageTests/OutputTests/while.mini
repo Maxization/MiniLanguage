@@ -1,5 +1,6 @@
 program {
     int n, k, i, j, squares;
+	i = j = squares = 0;
     
     n = 1;
     k = 8;

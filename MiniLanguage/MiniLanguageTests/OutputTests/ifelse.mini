@@ -1,6 +1,7 @@
 program {
     int n, iters;
     n = 7;
+	iters = 0;
     
     while (n != 1)
     {

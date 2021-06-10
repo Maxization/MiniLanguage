@@ -15,7 +15,7 @@ namespace MiniLanguageTests
         [MemberData(nameof(ValidTestNames))]
         public void ValidProgram(string test_name)
         {
-            var path = Utility.GetFile(test_name);
+            var path = Utility.GetFile(Utility.ValidTestsPath, test_name);
             string[] args = new string[] { path };
             int result = Compiler.Main(args);
 
@@ -30,7 +30,7 @@ namespace MiniLanguageTests
         [MemberData(nameof(OutputTestNames))]
         public void OutputProgram(string test_name)
         {
-            var path = Utility.GetFile(test_name);
+            var path = Utility.GetFile(Utility.OutputTestsPath, test_name);
             string[] args = new string[] { path };
             int result = Compiler.Main(args);
 

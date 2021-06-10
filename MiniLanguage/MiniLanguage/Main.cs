@@ -659,6 +659,7 @@ namespace MiniLanguage
                 }
                 else
                 {
+                    //TODO: Change
                     EmitCode($"%{unaryOp.Identifier.Name} = add i32 %{eval}, 0");
                 }
             }
@@ -670,6 +671,7 @@ namespace MiniLanguage
                 }
                 else
                 {
+                    //TODO: Change
                     EmitCode($"%{unaryOp.Identifier.Name} = fadd double %{eval}, 0.0");
                 }
             }
@@ -1249,7 +1251,7 @@ namespace MiniLanguage
             {
                 resultType = MiniTypes.Int;
             }
-            else if (Unary == Unary.ConversionToDouble && (type == MiniTypes.Int || type == MiniTypes.Double))
+            else if (Unary == Unary.ConversionToDouble && (resultType == MiniTypes.Int || resultType == MiniTypes.Double))
             {
                 resultType = MiniTypes.Double;
             }

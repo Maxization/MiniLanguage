@@ -6,12 +6,12 @@ program {
     int inside;
     double pi;
     
-    iters = 1000;
-    
     seed = 123456789;
     a = 48271;
     m = 2147483647; // 2^31 - 1, max int
-    
+    inside = i = 0;
+    iters = 1000;
+	
     while (i < iters) {
     
         // Create a new pseudorandom coordinate using an LCG

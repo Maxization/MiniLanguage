@@ -2,6 +2,9 @@ program {
     int x;
     double d;
     bool b;
+	x = 0;
+	d = 0;
+	b = false;
     
     write x;
     write " ";
