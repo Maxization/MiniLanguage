@@ -10,6 +10,7 @@ namespace MiniLanguageTests
         private readonly int noErrors = 0;
         public static IEnumerable<object[]> ValidTestNames => Utility.GetFiles(Utility.ValidTestsPath);
         public static IEnumerable<object[]> OutputTestNames => Utility.GetFiles(Utility.OutputTestsPath);
+        public static IEnumerable<object[]> FailTestNames => Utility.GetFiles(Utility.FailTestPath);
 
         [Theory]
         [MemberData(nameof(ValidTestNames))]
@@ -49,6 +50,17 @@ namespace MiniLanguageTests
             }
         }
 
-        
+        [Theory]
+        [MemberData(nameof(FailTestNames))]
+        public void FailProgram(string test_name)
+        {
+            var path = Utility.GetFile(Utility.FailTestPath, test_name);
+            string[] args = new string[] { path };
+            int result = Compiler.Main(args);
+
+            Assert.True(result > 0);
+        }
+
+
     }
 }

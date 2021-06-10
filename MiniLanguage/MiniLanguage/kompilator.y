@@ -31,9 +31,9 @@
 
 %%
 
-start: Program mainBlock { Compiler.Program = new Program($2 as MainBlock); }
-     | Program error EOF { Compiler.errors++; Compiler.PrintError(); YYABORT; }
-     | EOF               { Compiler.errors++; Compiler.PrintError(); YYABORT; }
+start: Program mainBlock EOF { Compiler.Program = new Program($2 as MainBlock); }
+     | Program error EOF     { Compiler.errors++; Compiler.PrintError(); YYABORT; }
+     | EOF                   { Compiler.errors++; Compiler.PrintError(); YYABORT; }
      ;
 
 mainBlock: OpenBrace declarations statements CloseBrace { $$ = new MainBlock($2, $3); }
@@ -45,6 +45,7 @@ declarations: declarations declaration Semicolon { $1.AddRange($2); $$ = $1; }
             ;
 
 declaration: Type idents Ident { $2.Add($3); $$ = $2.Select(name => Compiler.STG.AddDeclaration(name, $1) as INode).ToList(); }
+           | error             { Compiler.errors++; Compiler.PrintError(); $$ = new List<INode>(); }
            ;
 
 idents: idents Ident Comma { $1.Add($2); $$ = $1; }

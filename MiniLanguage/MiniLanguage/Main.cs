@@ -28,12 +28,14 @@ namespace MiniLanguage
             source = null;
         }
 
-        public static void PrintError(string message = null)
+        public static void PrintError(string message = null, bool lin_mes = true)
         {
+            if(lin_mes)
+                Console.Write($"line: {linenum}, ");
             if (message is null)
-                Console.WriteLine($"line: {linenum}, syntax error");
+                Console.WriteLine($"syntax error");
             else
-                Console.WriteLine($"line: {linenum}, " + message);
+                Console.WriteLine(message);
         }
 
         // arg[0] określa plik źródłowy
@@ -76,11 +78,17 @@ namespace MiniLanguage
             }
             catch (Exception ex)
             {
+                errors++;
                 Console.WriteLine($"error: line {linenum}, {ex.Message}");
             }
-            
             source.Close();
-            if (errors == 0 && Program != null)
+
+            if(Program == null)
+            {
+                errors++;
+            }
+
+            if (errors == 0)
             {
                 OutputFile = file + ".ll";
                 sw = new StreamWriter(OutputFile);
@@ -369,7 +377,7 @@ namespace MiniLanguage
         public string EmitIntToDouble(string ident_int)
         {
             var tmp = Helper.NewTmp();
-            EmitCode($"%{tmp} = uitofp i32 %{ident_int} to double");
+            EmitCode($"%{tmp} = sitofp i32 %{ident_int} to double");
             return tmp;
         }
         
@@ -831,6 +839,10 @@ namespace MiniLanguage
             {
                 Value = ConvertHexToInt(value);
             }
+            else if(type == MiniTypes.Int)
+            {
+                Value = value;
+            }
             else if (type == MiniTypes.Bool)
             {
                 if(value == "true")
@@ -841,11 +853,10 @@ namespace MiniLanguage
                 {
                     Value = "0";
                 }
-                
             }
             else
             {
-                Value = value;
+                Value = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0###############}", value);
             }
             
             Identifier = new Identifier(Helper.NewTmp(), type);

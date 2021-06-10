@@ -1,0 +1,16 @@
+program {
+    int x;
+    int y;
+    bool z;
+    double d;
+    
+    x = y = 1 = 2;
+    
+    1 = 2;
+    
+    x = z = 1;
+    
+    z = x = 1;
+    
+    x = d = 9;
+}

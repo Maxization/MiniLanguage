@@ -1,0 +1,7 @@
+program {
+    while (1) {} // int
+    
+    while (0.0 + 3.14) {} // double
+    
+    while true {} // Missing parentheses
+}

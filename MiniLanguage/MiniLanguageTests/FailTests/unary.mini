@@ -1,0 +1,11 @@
+program {
+    bool b;
+    int x;
+    
+    b = -false;
+    b = !1;
+    b = !0.0;
+    
+    x = ~3.14;
+    x = ~true;
+}

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="FailTests\" />
     <Folder Include="OutputTests\" />
     <Folder Include="ValidTests\" />
   </ItemGroup>

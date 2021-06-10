@@ -13,6 +13,7 @@ namespace MiniLanguageTests
     {
         public static string ValidTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\ValidTests"); }
         public static string OutputTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\OutputTests"); }
+        public static string FailTestPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\FailTests"); }
         public static string GetFile(string path, string name)
         {
             return Path.Combine(path, name);

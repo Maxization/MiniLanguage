@@ -1,0 +1,16 @@
+program {
+    int x;
+    double y;
+    bool z;
+    
+    x = "napis1";
+    y = "napis2";
+    z = "napis3";
+    
+    write "unmatched;
+
+    write unmatched";
+    
+    write "multiline
+           string";
+}
