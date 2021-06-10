@@ -62,8 +62,8 @@ statement: evaluable Semicolon { $$ = $1; }
          | block               { $$ = $1; }
          | if                  { $$ = $1; }
          | while               { $$ = $1; }
-         | evaluable error     { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
-         | write error         { $$ = $1; Compiler.errors++; Compiler.PrintError(); }
+         | error EOF           { Compiler.errors++; Compiler.PrintError(); YYABORT; }
+         | error Semicolon     { Compiler.errors++; Compiler.PrintError(); }
          ;
 
 return: Return { $$ = new ReturnStatement(); }

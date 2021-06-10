@@ -1,0 +1,11 @@
+program {
+    int x, y;
+    double d;
+    
+    d = x = y = 6;
+    write x;
+    write " ";
+    write y;
+    write " ";
+    write d;
+}

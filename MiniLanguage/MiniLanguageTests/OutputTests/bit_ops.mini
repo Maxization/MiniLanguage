@@ -1,0 +1,19 @@
+program {
+    int x, g;
+    double k;
+    
+    x = 9 | 6;
+    write x; write " ";
+    
+    k = 105 & 184;
+    
+    write k; write " ";
+    
+    // Priority over + - * /
+    
+    g = 1 + 2 | 3 - 4;
+    write g; write " ";
+    
+    g = 1 | 2 + 8 & 4;
+    write g;
+}

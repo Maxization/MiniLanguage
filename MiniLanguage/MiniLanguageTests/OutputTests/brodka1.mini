@@ -1,0 +1,14 @@
+program {
+    int i;
+    double d;
+    bool b;
+    i = 5;
+    d = 123.456;
+    b = true;
+    write i;
+    write " ";
+    write d;
+    write " ";
+    write b;
+    write " ";
+}

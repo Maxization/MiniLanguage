@@ -12,15 +12,16 @@ namespace MiniLanguageTests
     public static class Utility
     {
         public static string ValidTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\ValidTests"); }
+        public static string OutputTestsPath { get => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\OutputTests"); }
         public static string GetFile(string name)
         {
             return Path.Combine(ValidTestsPath, name);
         }
 
-        public static IEnumerable<object[]> GetValidFiles()
+        public static IEnumerable<object[]> GetFiles(string sourcePath)
         {
             List<object[]> result = new List<object[]>();
-            string[] files = Directory.GetFiles(ValidTestsPath);
+            string[] files = Directory.GetFiles(sourcePath);
             foreach(string path in files)
             {
                 if(!path.EndsWith(".ll"))
@@ -56,5 +57,23 @@ namespace MiniLanguageTests
 
             return output.GetAwaiter().GetResult();
         }
+
+        public static (string, string)[] Outputs => new (string, string)[]
+                {
+                    ("bit_ops.mini", "15 40.000000 0 3"),
+                    ("brodka1.mini", "5 123.456000 True "),
+                    ("brodka2.mini", "1 12 True"),
+                    ("comp_ops.mini", "True False False False True True True True True"),
+                    ("default.mini", "0 0.000000 False"),
+                    ("ifelse.mini", "7 22 11 34 17 52 26 13 40 20 10 5 16 8 4 2 iters: 16"),
+                    ("logic_ops.mini", "True True False True False"),
+                    ("math_ops.mini", "3 -1 2 0.000000 0.500000 2.000000 6 -2.000000 25.000000 6 6"),
+                    ("monte_carlo.mini", "PI between 3 and 3.3: True"),
+                    ("multi_assignment.mini", "6 6 6.000000"),
+                    ("return.mini", "return"),
+                    ("strings.mini", "\\\"\n?"),
+                    ("unary.mini", "-1 5 False True -2 1 3.560000 8.000000 0.000000 1.000000 5 1 3 1 0"),
+                    ("while.mini", "40320 1 2 3 4 5 9 -2 0")
+                };
     }
 }

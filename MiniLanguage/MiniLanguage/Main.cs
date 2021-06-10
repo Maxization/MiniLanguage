@@ -80,7 +80,7 @@ namespace MiniLanguage
             }
             
             source.Close();
-            if (errors == 0)
+            if (errors == 0 && Program != null)
             {
                 OutputFile = file + ".ll";
                 sw = new StreamWriter(OutputFile);
@@ -91,7 +91,7 @@ namespace MiniLanguage
             }
             else
             {
-                Console.WriteLine($"\n  {errors} errors detected\n");
+                Console.WriteLine($"\n errors detected\n");
             }
 
             return errors == 0 ? 0 : 2;
@@ -605,7 +605,10 @@ namespace MiniLanguage
             var op = Helper.GetMathematical(mathhematicalOp.Mathhematical, resultType);
 
             var tmpLeft = mathhematicalOp.Left.Identifier.Name;
+            var leftType = mathhematicalOp.Left.Identifier.Type;
+
             var tmpRight = mathhematicalOp.Right.Identifier.Name;
+            var rightType = mathhematicalOp.Right.Identifier.Type;
 
             if (resultType == MiniTypes.Int)
             {
@@ -613,11 +616,12 @@ namespace MiniLanguage
             }
             else
             {
-                if(mathhematicalOp.Left.Identifier.Type == MiniTypes.Int)
+                if(leftType == MiniTypes.Int)
                 {
                     tmpLeft = EmitIntToDouble(tmpLeft);
                 }
-                else
+
+                if(rightType == MiniTypes.Int)
                 {
                     tmpRight = EmitIntToDouble(tmpRight);
                 }
@@ -1109,7 +1113,6 @@ namespace MiniLanguage
         Sub,
         Mul,
         Div
-
     }
     public class MathhematicalOp : IEvaluable, IBinaryOperator
     {
