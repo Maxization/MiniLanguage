@@ -13,7 +13,7 @@ MiniLanguage/MiniLanguage/gplex.exe
 MiniLanguage/MiniLanguage/kompilator.lst
 MiniLanguage/MiniLanguage/kompilator.conflicts
 MiniLanguage/MiniLanguage/kompilator.report.html
-MiniLanguage/MiniLanguageTests/ValidTests/*.ll
+*.ll
 
 # User-specific files
 *.rsuser
