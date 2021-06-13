@@ -1,0 +1,9 @@
+program
+{
+int n;
+double m;
+
+n = 5;
+
+m = n;
+}

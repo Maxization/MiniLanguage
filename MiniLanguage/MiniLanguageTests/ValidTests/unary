@@ -1,0 +1,16 @@
+program
+{
+int a;
+double b;
+bool c;
+int d;
+a = 5;
+b = 6.5;
+c = true;
+d = -a;
+d = --d;
+d = ~d;
+c = !c;
+d = (int)b;
+b = (double)d;
+}

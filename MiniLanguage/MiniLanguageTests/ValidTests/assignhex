@@ -1,0 +1,12 @@
+program
+{
+int a;
+a = 0X12;
+a = 0X12;
+a = 0X1A;
+a = 0X1a;
+a = 0x12;
+a = 0x12;
+a = 0x1A;
+a = 0x1a;
+}

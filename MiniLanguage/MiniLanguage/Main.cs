@@ -10,7 +10,7 @@ namespace MiniLanguage
     public class Compiler
     {
         public static int errors;
-        public static int linenum;
+        public static int linenum = 1;
         private static StreamWriter sw;
         public static Program Program { get; set; }
         public static CodeGenerator codeGenerator { get; set; }
@@ -21,7 +21,7 @@ namespace MiniLanguage
         public static void Reset()
         {
             errors = 0;
-            linenum = 0;
+            linenum = 1;
             Program = null;
             codeGenerator = null;
             STG.Reset();
@@ -30,7 +30,7 @@ namespace MiniLanguage
 
         public static void PrintError(string message = null, bool lin_mes = true)
         {
-            if(lin_mes)
+            if (lin_mes)
                 Console.Write($"line: {linenum}, ");
             if (message is null)
                 Console.WriteLine($"syntax error");
@@ -83,7 +83,7 @@ namespace MiniLanguage
             }
             source.Close();
 
-            if(Program == null)
+            if (Program == null)
             {
                 errors++;
             }
@@ -164,7 +164,6 @@ namespace MiniLanguage
 
         public static string NewName(string prefix) => $"{prefix}_{++nr}";
 
-
         public void Reset()
         {
             nr = 0;
@@ -172,9 +171,9 @@ namespace MiniLanguage
         }
         public Declaration AddDeclaration(string name, AbstractMiniType type)
         {
-            if(Declarations.ContainsKey(name))
+            if (Declarations.ContainsKey(name))
             {
-                Compiler.linenum++;
+                Compiler.errors++;
                 Compiler.PrintError("variable already declared");
                 return new Declaration(new Identifier());
             }
@@ -190,7 +189,7 @@ namespace MiniLanguage
 
         public Identifier FindIdent(string name)
         {
-            if(!Declarations.ContainsKey(name))
+            if (!Declarations.ContainsKey(name))
             {
                 Compiler.errors++;
                 Compiler.PrintError("undeclared variable");
@@ -221,11 +220,11 @@ namespace MiniLanguage
                 return "i32";
             }
         }
-    
+
         public static string GetRelation(Relation relation, AbstractMiniType type)
         {
             bool isDouble = type == MiniTypes.Double;
-            switch(relation)
+            switch (relation)
             {
                 case Relation.Equal:
                     if (isDouble)
@@ -258,7 +257,7 @@ namespace MiniLanguage
         public static string GetMathematical(Mathhematical mathhematical, AbstractMiniType type)
         {
             bool isDouble = type == MiniTypes.Double;
-            switch(mathhematical)
+            switch (mathhematical)
             {
                 default:
                 case Mathhematical.Add:
@@ -282,7 +281,7 @@ namespace MiniLanguage
 
         public static string GetBitwise(Bitwise bitwise)
         {
-            switch(bitwise)
+            switch (bitwise)
             {
                 case Bitwise.And:
                     return "and";
@@ -298,7 +297,7 @@ namespace MiniLanguage
 
             var result = new StringBuilder();
             var counter = 0;
-            
+
             for (int i = 0; i < tmp.Length; i++)
             {
                 if (tmp[i] == '\\')
@@ -363,7 +362,7 @@ namespace MiniLanguage
         private static StreamWriter sw;
         public static void EmitCode(string instr = null) => sw.WriteLine(instr);
         public static void EmitCode(string instr, params object[] args) => sw.WriteLine(instr, args);
-        
+
         public CodeGenerator(StreamWriter streamWriter)
         {
             sw = streamWriter;
@@ -380,7 +379,7 @@ namespace MiniLanguage
             EmitCode($"%{tmp} = sitofp i32 %{ident_int} to double");
             return tmp;
         }
-        
+
         private void GenProlog()
         {
             EmitCode("; prolog");
@@ -399,7 +398,7 @@ namespace MiniLanguage
             EmitCode("%int = alloca i32");
             EmitCode("%double = alloca double");
             EmitCode("%bool = alloca i1");
-            
+
         }
 
         private void GenEpilog()
@@ -453,7 +452,7 @@ namespace MiniLanguage
             var leftType = assignment.Left.Identifier.Type;
             var rightType = assignment.Right.Identifier.Type;
 
-            if(leftType == MiniTypes.Double && rightType == MiniTypes.Int)
+            if (leftType == MiniTypes.Double && rightType == MiniTypes.Int)
             {
                 tmp = EmitIntToDouble(assignment.Right.Identifier.Name);
             }
@@ -529,19 +528,20 @@ namespace MiniLanguage
             AbstractMiniType leftType = relationOp.Left.Identifier.Type;
             AbstractMiniType rightType = relationOp.Right.Identifier.Type;
 
-            if(leftType == MiniTypes.Double || rightType == MiniTypes.Double)
+            if (leftType == MiniTypes.Double || rightType == MiniTypes.Double)
             {
-                if (leftType == MiniTypes.Double && rightType == MiniTypes.Int)
+                if (rightType == MiniTypes.Int)
                 {
                     tmp2 = EmitIntToDouble(relationOp.Right.Identifier.Name);
                 }
-                else if (rightType == MiniTypes.Double && leftType == MiniTypes.Int)
+                else if (leftType == MiniTypes.Int)
                 {
                     tmp1 = EmitIntToDouble(relationOp.Left.Identifier.Name);
                 }
+
                 var relation = Helper.GetRelation(relationOp.Relation, MiniTypes.Double);
                 EmitCode($"%{relationOp.Identifier.Name} = fcmp {relation} double %{tmp1}, %{tmp2}");
-            } 
+            }
             else if (leftType == MiniTypes.Int)
             {
                 var relation = Helper.GetRelation(relationOp.Relation, MiniTypes.Int);
@@ -559,7 +559,7 @@ namespace MiniLanguage
             write.Evaluable.Accept(this);
 
             var type = write.Evaluable.Identifier.Type;
-            if(type == MiniTypes.Bool)
+            if (type == MiniTypes.Bool)
             {
                 var label_true = Helper.NewLabel();
                 var label_false = Helper.NewLabel();
@@ -574,7 +574,7 @@ namespace MiniLanguage
                 EmitCode($"{label_end}:");
 
             }
-            else if( type == MiniTypes.Double)
+            else if (type == MiniTypes.Double)
             {
                 EmitCode($"call i32 (i8*, ...) @printf(i8* bitcast ([4 x i8]* @double_res to i8*)," +
                 $" double %{write.Evaluable.Identifier.Name})");
@@ -624,12 +624,12 @@ namespace MiniLanguage
             }
             else
             {
-                if(leftType == MiniTypes.Int)
+                if (leftType == MiniTypes.Int)
                 {
                     tmpLeft = EmitIntToDouble(tmpLeft);
                 }
 
-                if(rightType == MiniTypes.Int)
+                if (rightType == MiniTypes.Int)
                 {
                     tmpRight = EmitIntToDouble(tmpRight);
                 }
@@ -650,36 +650,33 @@ namespace MiniLanguage
 
         public void Visit(UnaryOp unaryOp)
         {
-            // TODO: Divide into classes
             unaryOp.Evaluable.Accept(this);
 
             var type = unaryOp.Evaluable.Identifier.Type;
             var eval = unaryOp.Evaluable.Identifier.Name;
-            if(unaryOp.Unary == Unary.ConversionToInt)
+            if (unaryOp.Unary == Unary.ConversionToInt)
             {
-                if(type == MiniTypes.Bool)
+                if (type == MiniTypes.Bool)
                 {
                     EmitCode($"%{unaryOp.Identifier.Name} = zext i1 %{eval} to i32");
                 }
-                else if(type == MiniTypes.Double)
+                else if (type == MiniTypes.Double)
                 {
                     EmitCode($"%{unaryOp.Identifier.Name} = fptosi double %{eval} to i32");
                 }
                 else
                 {
-                    //TODO: Change
                     EmitCode($"%{unaryOp.Identifier.Name} = add i32 %{eval}, 0");
                 }
             }
-            else if(unaryOp.Unary == Unary.ConversionToDouble)
+            else if (unaryOp.Unary == Unary.ConversionToDouble)
             {
-                if(type == MiniTypes.Int)
+                if (type == MiniTypes.Int)
                 {
                     EmitCode($"%{unaryOp.Identifier.Name} = sitofp i32 %{eval} to double");
                 }
                 else
                 {
-                    //TODO: Change
                     EmitCode($"%{unaryOp.Identifier.Name} = fadd double %{eval}, 0.0");
                 }
             }
@@ -701,7 +698,7 @@ namespace MiniLanguage
                 {
                     EmitCode($"%{unaryOp.Identifier.Name} = sub i32 0, %{eval}");
                 }
-                
+
             }
         }
 
@@ -718,7 +715,7 @@ namespace MiniLanguage
             ifStatement.Statement.Accept(this);
             EmitCode($"br label %{label_end}");
             EmitCode($"{label_false}:");
-            if(ifStatement.ElseStatement != null)
+            if (ifStatement.ElseStatement != null)
             {
                 ifStatement.ElseStatement.Accept(this);
             }
@@ -839,13 +836,13 @@ namespace MiniLanguage
             {
                 Value = ConvertHexToInt(value);
             }
-            else if(type == MiniTypes.Int)
+            else if (type == MiniTypes.Int)
             {
                 Value = value;
             }
             else if (type == MiniTypes.Bool)
             {
-                if(value == "true")
+                if (value == "true")
                 {
                     Value = "1";
                 }
@@ -858,7 +855,7 @@ namespace MiniLanguage
             {
                 Value = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0###############}", value);
             }
-            
+
             Identifier = new Identifier(Helper.NewTmp(), type);
         }
         public void Accept(IVisitor visitor) => visitor.Visit(this);
@@ -882,12 +879,12 @@ namespace MiniLanguage
         public void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
-    public interface IEvaluable: INode
+    public interface IEvaluable : INode
     {
         Identifier Identifier { get; }
     }
 
-    public interface IAssignable: IEvaluable
+    public interface IAssignable : IEvaluable
     {
         string Name { get; }
         AbstractMiniType Type { get; }
@@ -906,7 +903,7 @@ namespace MiniLanguage
         public WriteHex(IEvaluable evaluable)
         {
             Evaluable = evaluable;
-            if(evaluable.Identifier.Type != MiniTypes.Int)
+            if (evaluable.Identifier.Type != MiniTypes.Int)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -930,7 +927,7 @@ namespace MiniLanguage
         {
             Variable = variable;
 
-            if(Variable.Type == MiniTypes.Bool)
+            if (Variable.Type == MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -946,7 +943,7 @@ namespace MiniLanguage
         {
             Variable = variable;
 
-            if(Variable.Type != MiniTypes.Int)
+            if (Variable.Type != MiniTypes.Int)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -967,7 +964,7 @@ namespace MiniLanguage
             Statement = statement;
             ElseStatement = elseStatement;
 
-            if(test.Identifier.Type != MiniTypes.Bool)
+            if (test.Identifier.Type != MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -992,7 +989,7 @@ namespace MiniLanguage
             Test = test;
             Statement = statement;
 
-            if(test.Identifier.Type != MiniTypes.Bool)
+            if (test.Identifier.Type != MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -1013,12 +1010,12 @@ namespace MiniLanguage
             Left = assignable;
             Right = evaluable;
 
-            if((assignable.Type == MiniTypes.Double && evaluable.Identifier.Type == MiniTypes.Bool) ||
+            if ((assignable.Type == MiniTypes.Double && evaluable.Identifier.Type == MiniTypes.Bool) ||
                (assignable.Type == MiniTypes.Int && evaluable.Identifier.Type != MiniTypes.Int) ||
                (assignable.Type == MiniTypes.Bool && evaluable.Identifier.Type != MiniTypes.Bool))
             {
                 Compiler.errors++;
-                Compiler.PrintError("InvalidTypes");
+                Compiler.PrintError("Invalid types");
             }
         }
 
@@ -1033,42 +1030,39 @@ namespace MiniLanguage
         IEvaluable Right { get; }
     }
 
-    public abstract class LogicOp : IBinaryOperator
+    public abstract class LogicOp : IBinaryOperator, IEvaluable
     {
         public IEvaluable Left { get; }
         public IEvaluable Right { get; }
 
+        public Identifier Identifier { get; }
+
         public LogicOp(IEvaluable eval1, IEvaluable eval2)
         {
-            if(eval1.Identifier.Type != MiniTypes.Bool ||  eval2.Identifier.Type != MiniTypes.Bool)
+            if (eval1.Identifier.Type != MiniTypes.Bool || eval2.Identifier.Type != MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
             }
             Left = eval1;
             Right = eval2;
+
+            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
         }
+
+        public abstract void Accept(IVisitor visitor);
     }
 
     public class LogicAnd : LogicOp, IEvaluable
     {
-        public Identifier Identifier { get; }
-
-        public LogicAnd(IEvaluable eval1, IEvaluable eval2): base(eval1, eval2)
-        {
-            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
-        }
-        public void Accept(IVisitor visitor) => visitor.Visit(this);
+        public LogicAnd(IEvaluable eval1, IEvaluable eval2) : base(eval1, eval2) { }
+        public override void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
     public class LogicOr : LogicOp, IEvaluable
     {
-        public Identifier Identifier { get; }
-        public LogicOr(IEvaluable eval1, IEvaluable eval2) : base(eval1, eval2)
-        {
-            Identifier = new Identifier(Helper.NewTmp(), eval1.Identifier.Type);
-        }
-        public void Accept(IVisitor visitor) => visitor.Visit(this);
+        public LogicOr(IEvaluable eval1, IEvaluable eval2) : base(eval1, eval2) { }
+        public override void Accept(IVisitor visitor) => visitor.Visit(this);
     }
 
     public enum Relation
@@ -1100,7 +1094,7 @@ namespace MiniLanguage
             var leftType = eval1.Identifier.Type;
             var rightType = eval2.Identifier.Type;
 
-            if(relation == Relation.Equal || relation == Relation.NotEqual)
+            if (relation == Relation.Equal || relation == Relation.NotEqual)
             {
                 if ((leftType == MiniTypes.Bool && rightType != MiniTypes.Bool) ||
                     (rightType == MiniTypes.Bool && leftType != MiniTypes.Bool))
@@ -1114,7 +1108,7 @@ namespace MiniLanguage
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
             }
-            
+
         }
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);
@@ -1146,7 +1140,7 @@ namespace MiniLanguage
             var rightType = right.Identifier.Type;
 
             AbstractMiniType resultType;
-            if(leftType == MiniTypes.Int && rightType == MiniTypes.Int)
+            if (leftType == MiniTypes.Int && rightType == MiniTypes.Int)
             {
                 resultType = MiniTypes.Int;
             }
@@ -1155,7 +1149,7 @@ namespace MiniLanguage
                 resultType = MiniTypes.Double;
             }
 
-            if(leftType == MiniTypes.Bool || rightType == MiniTypes.Bool)
+            if (leftType == MiniTypes.Bool || rightType == MiniTypes.Bool)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -1189,7 +1183,7 @@ namespace MiniLanguage
             var leftType = left.Identifier.Type;
             var rightType = right.Identifier.Type;
 
-            if(leftType != MiniTypes.Int || rightType != MiniTypes.Int)
+            if (leftType != MiniTypes.Int || rightType != MiniTypes.Int)
             {
                 Compiler.errors++;
                 Compiler.PrintError("Invalid types");
@@ -1246,14 +1240,14 @@ namespace MiniLanguage
         public UnaryOp(IEvaluable evaluable, AbstractMiniType type)
         {
             Evaluable = evaluable;
-            
+
             var resultType = evaluable.Identifier.Type;
-            
-            if(type == MiniTypes.Int)
+
+            if (type == MiniTypes.Int)
             {
                 Unary = Unary.ConversionToInt;
             }
-            else if(type == MiniTypes.Double)
+            else if (type == MiniTypes.Double)
             {
                 Unary = Unary.ConversionToDouble;
             }

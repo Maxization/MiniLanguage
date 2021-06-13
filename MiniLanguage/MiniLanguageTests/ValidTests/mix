@@ -1,0 +1,7 @@
+program
+{
+int x, y, z;
+double xd, yd, zd;
+bool xb, yb, zb; 
+xb = yb = true || !((-x) * (-1) + (1 & z) == z * (x + 5) / y - 9 || true) && !yb;
+}

@@ -1,0 +1,7 @@
+program {
+double d;
+bool b;
+b = true;
+d = (double) b; 
+d = (double) true;
+}

@@ -1,0 +1,23 @@
+program {
+int a, b, c, d;
+a = 0x1fa;
+write a;
+write "\n";
+write a, hex;
+write "\n";
+b = 0X1FA;
+write b;
+write "\n";
+write b, hex;
+write "\n";
+c = 0x1Fa;
+write c;
+write "\n";
+write c, hex;
+write "\n";
+d = 5 + 10 + 0x10;
+write d;
+write "\n";
+write d, hex;
+write "\n";
+}

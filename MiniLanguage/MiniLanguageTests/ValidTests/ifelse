@@ -1,0 +1,13 @@
+program
+{
+bool a;
+bool b;
+a = true;
+b = false;
+if(a)
+a = false;
+if(b)
+b = false;
+else
+b = true;
+}

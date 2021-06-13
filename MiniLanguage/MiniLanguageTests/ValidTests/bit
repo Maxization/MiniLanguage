@@ -1,0 +1,11 @@
+program
+{
+int a;
+int b;
+int and;
+int or;
+a = 5;
+b = 6;
+and = a & b;
+or = a | b;
+}

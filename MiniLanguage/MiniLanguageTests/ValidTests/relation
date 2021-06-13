@@ -1,0 +1,17 @@
+program
+{
+int a;
+int b;
+int c;
+bool less;
+bool gte;
+bool eq;
+bool neq;
+a = 5;
+b = 6;
+c = 5;
+less = a < b;
+gte = a >= b;
+eq = a == c;
+neq = a == b;
+}

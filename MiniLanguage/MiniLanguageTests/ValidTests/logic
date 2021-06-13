@@ -1,0 +1,15 @@
+program
+{
+bool a;
+bool b;
+bool c;
+bool eqn;
+bool eqt;
+bool ort;
+a = true;
+b = false;
+c = true;
+eqn = a && b;
+eqt = a && c;
+ort = b || c;
+}

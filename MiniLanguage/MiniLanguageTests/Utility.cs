@@ -74,7 +74,8 @@ namespace MiniLanguageTests
                     ("return.mini", "return"),
                     ("strings.mini", "\\\"\r\n?"),
                     ("unary.mini", "-1 5 False True -2 1 3.560000 8.000000 5 1 3 1 0"),
-                    ("while.mini", "40320 1 2 3 4 5 9 -2 0")
+                    ("while.mini", "40320 1 2 3 4 5 9 -2 0"),
+                    ("hex_test", "506\r\n0X1FA\r\n506\r\n0X1FA\r\n506\r\n0X1FA\r\n31\r\n0X1F\r\n")
                 };
     }
 }
