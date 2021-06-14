@@ -86,6 +86,7 @@ namespace MiniLanguage
             if (Program == null)
             {
                 errors++;
+                PrintError("syntax errors", false);
             }
 
             if (errors == 0)
