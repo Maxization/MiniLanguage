@@ -55,6 +55,7 @@ namespace MiniLanguage
                 Console.Write("\nsource file:  ");
                 file = Console.ReadLine();
             }
+
             try
             {
                 var sr = new StreamReader(file);
@@ -100,7 +101,7 @@ namespace MiniLanguage
             }
             else
             {
-                Console.WriteLine($"\n errors detected\n");
+                Console.WriteLine($"\n{errors} errors detected\n");
             }
 
             return errors == 0 ? 0 : 2;
@@ -693,11 +694,11 @@ namespace MiniLanguage
             {
                 if (type == MiniTypes.Double)
                 {
-                    EmitCode($"%{unaryOp.Identifier.Name} = fsub double 0.0, %{eval}");
+                    EmitCode($"%{unaryOp.Identifier.Name} = fmul double -1.0, %{eval}");
                 }
                 else
                 {
-                    EmitCode($"%{unaryOp.Identifier.Name} = sub i32 0, %{eval}");
+                    EmitCode($"%{unaryOp.Identifier.Name} = mul i32 -1, %{eval}");
                 }
 
             }
